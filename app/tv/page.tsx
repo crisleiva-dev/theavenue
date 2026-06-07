@@ -404,18 +404,14 @@ export default async function TvPage() {
                                   ? `${Math.round(day.temperature_2m_min[i])}°`
                                   : "--°"}
                               </span>
-                              {rain > 10 && (
-                                <>
-                                  <span
-                                    style={{ width: 14, display: "inline-block" }}
-                                  />
-                                  <span
-                                    style={{ color: "#22D3EE", fontSize: 14 }}
-                                  >
-                                    Rain {rain}%
-                                  </span>
-                                </>
-                              )}
+                              <span
+                                style={{ width: 14, display: "inline-block" }}
+                              />
+                              <span
+                                style={{ color: "#22D3EE", fontSize: 14 }}
+                              >
+                                Rain {rain}%
+                              </span>
                             </div>
                           </td>
                         );
@@ -454,7 +450,7 @@ export default async function TvPage() {
                 <div
                   style={{ fontSize: 15, color: COLORS.muted, marginTop: 4 }}
                 >
-                  Sandringham | Towards city
+                  Sandringham → Towards city
                 </div>
 
                 <div style={{ marginTop: 22 }}>
@@ -554,13 +550,102 @@ export default async function TvPage() {
           </tbody>
         </table>
 
+        {/* NEWS FEED SECTION */}
+        <table
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          style={{
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: 20,
+            padding: "28px 32px",
+            marginTop: 8,
+            borderCollapse: "separate",
+          }}
+        >
+          <tbody>
+            <tr>
+              <td colSpan={3}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    textTransform: "uppercase",
+                    letterSpacing: 2,
+                    color: COLORS.muted,
+                    marginBottom: 16,
+                  }}
+                >
+                  News Feed
+                </div>
+              </td>
+            </tr>
+            <tr>
+              {[
+                {
+                  title: "LIFT REPAIR WORKS",
+                  content:
+                    "Residents are advised that the lift is out of service for safety reasons while the Owners Corporation awaits a report from Kone (Fuji). Please use the stairwell. We apologise for the inconvenience and will provide updates as available.",
+                },
+                {
+                  title: "NEXT HARD RUBBISH COLLECTION DAY",
+                  content: "No dates booked",
+                },
+                {
+                  title: "HORIZON CONTACT",
+                  content:
+                    "Horizon Strata Management Group 03 9687 7788 info@horizonstrata.com.au",
+                },
+              ].map((news, i) => (
+                <td
+                  key={i}
+                  style={{
+                    width: "33%",
+                    background: COLORS.tile,
+                    borderRadius: 14,
+                    padding: "18px 18px",
+                    verticalAlign: "top",
+                    paddingRight: i < 2 ? 10 : 18,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: 1.5,
+                      color: COLORS.ice,
+                      marginBottom: 10,
+                  height: 34,
+                      lineHeight: "17px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {news.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: COLORS.muted,
+                      lineHeight: "1.5",
+                      minHeight: 60,
+                    }}
+                  >
+                    {news.content}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+
         {/* FOOTER */}
         <table
           width="100%"
           cellPadding={0}
           cellSpacing={0}
           style={{
-            marginTop: 12,
+            marginTop: 8,
             paddingTop: 14,
             borderTop: `1px solid ${COLORS.border}`,
           }}
