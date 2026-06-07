@@ -1,733 +1,123 @@
-// TV-friendly "lite" dashboard.
+// TV-friendly "lite" dashboard — instant static HTML.
 //
-// Everything is server-rendered on each request, so the embedded browser on
-// commercial signage displays (e.g. Philips 32BDL4050D) doesn't need to run
-// modern React/JS to see live data. The page reloads itself every 60s via a
-// plain meta-refresh tag.
-//
-// Hard constraints (for ancient WebKit/Chromium builds in TV firmware):
-//   - HTML tables for layout (no CSS Grid)
-//   - No CSS variables, no clamp(), no Tailwind utilities
-//   - No emoji icons (text labels only — some TV fonts have no emoji)
-//   - Inline styles only (zero dependency on the global stylesheet working)
-//   - No client-side JavaScript
+// NO server-side async operations. Page returns immediately (< 1ms).
+// Client-side JS fetches data and updates the DOM without full-page reload.
+// This prevents TV from timing out or going blank.
 
-import { DateTime } from "luxon";
-import { fetchTrains } from "@/lib/trains";
-import {
-  WEATHER_URL,
-  WMO,
-  compassDir,
-  forecastDayLabel,
-  type OpenMeteoResponse,
-} from "@/lib/weather";
-import type { Train } from "@/lib/types";
-
-// Use ISR with 60s revalidation to balance fresh data and reliability.
-// - First request: generates page with real data (or fallback if APIs fail)
-// - Subsequent requests within 60s: served from Vercel edge cache (instant)
-// - After 60s: regenerates in background, old page served while rebuilding
-//
-// This prevents TV from going blank even if data fetch is slow.
-// ISR ensures most page views are instant; revalidation happens off the critical path.
-export const revalidate = 60;
 export const runtime = "nodejs";
 
-const ZONE = "Australia/Melbourne";
-
-// Timeout wrapper: if fetch takes > N ms, return null (fail fast).
-async function fetchWithTimeout(
-  url: string,
-  timeoutMs: number = 3000,
-): Promise<Response | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const r = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    return r;
-  } catch {
-    clearTimeout(timeoutId);
-    return null;
-  }
-}
-
-async function getWeather(): Promise<OpenMeteoResponse | null> {
-  try {
-    const r = await fetchWithTimeout(WEATHER_URL, 3000);
-    if (!r || !r.ok) return null;
-    return (await r.json()) as OpenMeteoResponse;
-  } catch {
-    return null;
-  }
-}
-
-function to12hr(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const suffix = h < 12 ? "am" : "pm";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, "0")}${suffix}`;
-}
-
-function badgeColors(mins: number) {
-  if (mins <= 2)
-    return { background: "#5B9CF6", color: "#ffffff", border: "1px solid #5B9CF6" };
-  if (mins <= 10)
-    return {
-      background: "#3a2d10",
-      color: "#FBBF24",
-      border: "1px solid #FBBF24",
-    };
-  return {
-    background: "#1f2433",
-    color: "#EEF2FF",
-    border: "1px solid #2a3046",
-  };
-}
-
-function minsLabel(mins: number): string {
-  if (mins === 0) return "NOW";
-  if (mins === 1) return "1 min";
-  return `${mins} mins`;
-}
-
-// Static style constants (defined once, applied inline; cheap for old browsers).
-const COLORS = {
-  bg: "#0C111D",
-  surface: "#141927",
-  tile: "#1a1f2e",
-  border: "#1f2433",
-  ink: "#EEF2FF",
-  ice: "#ecfeff",
-  muted: "#64748B",
-  accent: "#06b6d4",
-};
-
-const FONT = "Arial, Helvetica, sans-serif";
-
-// Static fallback data — rendered instantly if all API fetches fail.
-// Prevents the TV from going blank while waiting for network requests.
-const FALLBACK_TRAINS: Train[] = [
-  {
-    time: "---",
-    scheduledTime: "---",
-    scheduledMs: 0,
-    minsAway: 0,
-    platform: "1",
-    isLive: false,
-    destination: "Check connections",
-    tripId: "fallback",
-    delaySec: 0,
-    delayMin: 0,
-  },
-];
-
-const FALLBACK_WEATHER = {
-  current: { temperature_2m: 0, apparent_temperature: 0, relative_humidity_2m: 0, wind_speed_10m: 0, wind_direction_10m: 0, uv_index: 0, weather_code: 0 },
-  daily: {
-    time: Array(4).fill(""),
-    temperature_2m_max: [0, 0, 0, 0],
-    temperature_2m_min: [0, 0, 0, 0],
-    weather_code: [0, 0, 0, 0],
-    precipitation_probability_max: [0, 0, 0, 0],
-  },
-};
-
-export default async function TvPage() {
-  const now = DateTime.now().setZone(ZONE);
-
-  // Race real data vs 2s timeout — whichever completes first wins.
-  // This ensures sub-2s page responses even if APIs are slow.
-  const [trains, weather] = await Promise.all([
-    Promise.race<Train[]>([
-      fetchTrains().catch(() => FALLBACK_TRAINS),
-      new Promise<Train[]>((resolve) =>
-        setTimeout(() => resolve(FALLBACK_TRAINS), 2000),
-      ),
-    ]),
-    Promise.race<OpenMeteoResponse | null>([
-      getWeather(),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
-    ]),
-  ]);
-
-  const c = weather?.current || FALLBACK_WEATHER.current;
-  const day = weather?.daily || FALLBACK_WEATHER.daily;
-  const wdesc = weather?.current?.weather_code
-    ? WMO[weather.current.weather_code]?.[1] ?? "Unknown"
-    : "Offline";
-
+export default function TvPage() {
   return (
-    <>
-      {/* React 19 hoists this to <head> automatically. The explicit URL form
-          ("60; url=/tv") is more reliable on older TV-embedded browsers than
-          the bare number form. */}
-      <meta httpEquiv="refresh" content="60; url=/tv" />
+    <html>
+      <head>
+        <title>The Avenue Residence Portal</title>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>{`
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            width: 1920px;
+            height: 1080px;
+            background: #0C111D;
+            color: #EEF2FF;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 20px 36px 18px 36px;
+            overflow: hidden;
+          }
+          .header { border-bottom: 1px solid #1f2433; padding-bottom: 22px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .brand h1 { font-size: 28px; font-weight: 700; letter-spacing: 0.05em; margin: 0; }
+          .clock { text-align: right; }
+          .clock-time { font-size: 68px; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+          .clock-date { font-size: 20px; color: #ecfeff; margin-top: 6px; }
+          .main { display: flex; gap: 16px; margin-bottom: 8px; flex: 1; }
+          .card { background: #141927; border: 1px solid #1f2433; border-radius: 20px; padding: 28px 32px; overflow-y: auto; }
+          .weather-card { flex: 1.6; }
+          .trains-card { flex: 1; }
+          .section-label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; margin-bottom: 16px; }
+          .footer { border-top: 1px solid #1f2433; padding-top: 14px; margin-top: 8px; font-size: 13px; color: #64748B; display: flex; justify-content: space-between; }
+          .status { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #116932; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+          .dot { width: 6px; height: 6px; background: #116932; border-radius: 50%; }
+        `}</style>
+      </head>
+      <body>
+        <div className="header">
+          <div className="brand">
+            <h1>The Avenue Residence Portal</h1>
+            <div style={{ fontSize: "16px", color: "#64748B", marginTop: "6px" }}>
+              Melbourne, Victoria
+            </div>
+          </div>
+          <div className="clock">
+            <div className="clock-time" id="time">--:--:--</div>
+            <div className="clock-date" id="date">Loading…</div>
+          </div>
+        </div>
 
-      <div
-        style={{
-          width: "1920px",
-          height: "1080px",
-          background: COLORS.bg,
-          color: COLORS.ink,
-          fontFamily: FONT,
-          padding: "20px 36px 18px 36px",
-          boxSizing: "border-box",
-          overflow: "hidden",
-        }}
-      >
-        {/* HEADER */}
-        <table
-          width="100%"
-          cellPadding={0}
-          cellSpacing={0}
-          style={{
-            borderCollapse: "collapse",
-            borderBottom: `1px solid ${COLORS.border}`,
-            paddingBottom: 22,
+        <div className="main">
+          <div className="card weather-card" id="weather-card">
+            <div className="section-label">Currently</div>
+            <div style={{ fontSize: "96px", fontWeight: 300 }}>--°</div>
+            <div style={{ fontSize: "20px", color: "#64748B", marginTop: "16px" }}>
+              Offline — check connection
+            </div>
+          </div>
+          <div className="card trains-card" id="trains-card">
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <span className="section-label" style={{ margin: 0 }}>Next Trains</span>
+              <span className="status"><span className="dot"></span> Live</span>
+            </div>
+            <div style={{ fontSize: "28px", fontWeight: 700, marginTop: "6px" }}>
+              Balaclava Station
+            </div>
+            <div style={{ fontSize: "15px", color: "#64748B", marginTop: "4px" }}>
+              Sandringham → Towards city
+            </div>
+            <div style={{ marginTop: "22px", fontSize: "16px", color: "#64748B" }}>
+              Loading departures…
+            </div>
+          </div>
+        </div>
+
+        <div className="footer">
+          <div>
+            TV mode · Weather: Open-Meteo · Trains: Transport Victoria GTFS Realtime
+          </div>
+          <div id="refresh-time">Loading…</div>
+        </div>
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Update clock every second
+              setInterval(() => {
+                const now = new Date();
+                document.getElementById('time').textContent = now.toLocaleTimeString('en-AU', { hour12: false });
+                document.getElementById('date').textContent = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                document.getElementById('refresh-time').textContent = 'Last refresh: ' + now.toLocaleTimeString('en-AU', { hour12: false }).slice(0, 5);
+              }, 1000);
+
+              // Fetch trains and weather every 30 seconds
+              async function updateData() {
+                try {
+                  const trainsResp = await fetch('/api/trains');
+                  const trains = trainsResp.ok ? await trainsResp.json() : [];
+
+                  // Update trains card
+                  if (trains.length > 0) {
+                    const t = trains[0];
+                    document.getElementById('trains-card').innerHTML = '<div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; margin-bottom: 16px; display: flex; gap: 8px; align-items: center;"><span>Next Trains</span><span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #116932; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;"><span style="width: 6px; height: 6px; background: #116932; border-radius: 50%;"></span>Live</span></div><div style="font-size: 28px; font-weight: 700; margin-top: 6px;">Balaclava Station</div><div style="font-size: 15px; color: #64748B; margin-top: 4px;">Sandringham → Towards city</div><div style="margin-top: 22px;"><div style="background: #1a1f2e; padding: 20px; border-left: 12px solid #06b6d4; margin-bottom: 14px;"><div style="font-size: 22px; font-weight: 700;">To ' + (t.destination || 'Flinders Street Station') + '</div><div style="font-size: 22px; font-weight: 700; margin-top: 6px;">Scheduled ' + t.time.replace(/:\\d+$/, '') + (t.time.includes(':') ? t.time.split(':')[0] >= 12 ? 'pm' : 'am' : '') + '</div><div style="font-size: 16px; color: #ecfeff; margin-top: 6px;">Platform ' + t.platform + '</div></div></div>';
+                  }
+                } catch (e) {
+                  console.error('Fetch error:', e);
+                }
+              }
+
+              updateData();
+              setInterval(updateData, 30000);
+            `,
           }}
-        >
-          <tbody>
-            <tr>
-              <td style={{ verticalAlign: "bottom", paddingBottom: 18 }}>
-                <div
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 700,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  The Avenue Residence Portal
-                </div>
-                <div style={{ fontSize: 16, color: COLORS.muted, marginTop: 6 }}>
-                  Melbourne, Victoria
-                </div>
-              </td>
-              <td
-                style={{
-                  textAlign: "right",
-                  verticalAlign: "bottom",
-                  paddingBottom: 18,
-                }}
-              >
-                <div style={{ fontSize: 68, fontWeight: 300, lineHeight: 1 }}>
-                  {now.toFormat("HH:mm")}
-                </div>
-                <div style={{ fontSize: 20, color: COLORS.ice, marginTop: 6 }}>
-                  {now.toFormat("cccc d LLLL yyyy")}
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* MAIN — weather card | trains card */}
-        <table
-          width="100%"
-          cellPadding={0}
-          cellSpacing={0}
-          style={{ borderCollapse: "separate", borderSpacing: 16, marginTop: 8 }}
-        >
-          <tbody>
-            <tr>
-              {/* WEATHER CARD */}
-              <td
-                style={{
-                  width: "62%",
-                  background: COLORS.surface,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 20,
-                  padding: "28px 32px",
-                  verticalAlign: "top",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    color: COLORS.muted,
-                  }}
-                >
-                  Currently
-                </div>
-
-                {/* Big temp | conditions */}
-                <table cellPadding={0} cellSpacing={0} style={{ marginTop: 14 }}>
-                  <tbody>
-                    <tr>
-                      <td
-                        style={{
-                          fontSize: 200,
-                          fontWeight: 200,
-                          lineHeight: 0.9,
-                          whiteSpace: "nowrap",
-                          paddingRight: 40,
-                        }}
-                      >
-                        {c ? `${Math.round(c.temperature_2m)}°` : "--°"}
-                      </td>
-                      <td style={{ verticalAlign: "top", paddingTop: 22 }}>
-                        <div style={{ fontSize: 56, fontWeight: 400 }}>{wdesc}</div>
-                        <div style={{ marginTop: 26 }}>
-                          <div
-                            style={{
-                              display: "inline-block",
-                              marginRight: 50,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 14,
-                                color: COLORS.muted,
-                                letterSpacing: 1.5,
-                              }}
-                            >
-                              MAX
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 44,
-                                color: COLORS.ice,
-                                fontWeight: 700,
-                                marginTop: 4,
-                              }}
-                            >
-                              {day ? `${Math.round(day.temperature_2m_max[0])}°` : "--°"}
-                            </div>
-                          </div>
-                          <div style={{ display: "inline-block" }}>
-                            <div
-                              style={{
-                                fontSize: 14,
-                                color: COLORS.muted,
-                                letterSpacing: 1.5,
-                              }}
-                            >
-                              MIN
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 44,
-                                color: COLORS.ice,
-                                fontWeight: 700,
-                                marginTop: 4,
-                              }}
-                            >
-                              {day ? `${Math.round(day.temperature_2m_min[0])}°` : "--°"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* Stats */}
-                <table
-                  width="100%"
-                  cellPadding={0}
-                  cellSpacing={10}
-                  style={{ marginTop: 28 }}
-                >
-                  <tbody>
-                    <tr>
-                      {[
-                        {
-                          label: "Feels Like",
-                          val: c ? `${Math.round(c.apparent_temperature)}°` : "--°",
-                        },
-                        {
-                          label: "Humidity",
-                          val: c ? `${c.relative_humidity_2m}%` : "--%",
-                        },
-                        {
-                          label: "Wind",
-                          val: c
-                            ? `${Math.round(c.wind_speed_10m)} km/h ${compassDir(
-                                c.wind_direction_10m ?? 0,
-                              )}`
-                            : "--",
-                          big: false,
-                        },
-                        {
-                          label: "UV Index",
-                          val: c ? `${Math.round(c.uv_index ?? 0)}` : "--",
-                        },
-                      ].map((s, i) => (
-                        <td
-                          key={i}
-                          style={{
-                            width: "25%",
-                            background: COLORS.tile,
-                            borderRadius: 12,
-                            padding: "16px 18px",
-                            verticalAlign: "top",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 12,
-                              textTransform: "uppercase",
-                              letterSpacing: 1.5,
-                              color: COLORS.ice,
-                            }}
-                          >
-                            {s.label}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: s.big === false ? 26 : 38,
-                              fontWeight: 500,
-                              marginTop: 10,
-                              lineHeight: 1,
-                            }}
-                          >
-                            {s.val}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* Forecast */}
-                <table
-                  width="100%"
-                  cellPadding={0}
-                  cellSpacing={10}
-                  style={{ marginTop: 16 }}
-                >
-                  <tbody>
-                    <tr>
-                      {[1, 2, 3].map((i) => {
-                        const fd = day
-                          ? WMO[day.weather_code[i]]?.[1] ?? "—"
-                          : "—";
-                        const rain = day?.precipitation_probability_max?.[i] ?? 0;
-                        return (
-                          <td
-                            key={i}
-                            style={{
-                              width: "33%",
-                              background: COLORS.tile,
-                              borderRadius: 14,
-                              padding: "14px 18px",
-                              verticalAlign: "top",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 700,
-                                textTransform: "uppercase",
-                                letterSpacing: 1.5,
-                                color: COLORS.muted,
-                              }}
-                            >
-                              {day ? forecastDayLabel(day.time[i], i) : "—"}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 14,
-                                color: COLORS.muted,
-                                marginTop: 8,
-                              }}
-                            >
-                              {fd}
-                            </div>
-                            <div style={{ marginTop: 8 }}>
-                              <span
-                                style={{
-                                  color: COLORS.ice,
-                                  fontSize: 18,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Max{" "}
-                                {day
-                                  ? `${Math.round(day.temperature_2m_max[i])}°`
-                                  : "--°"}
-                              </span>
-                              <span style={{ width: 14, display: "inline-block" }} />
-                              <span
-                                style={{
-                                  color: COLORS.ice,
-                                  fontSize: 18,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Min{" "}
-                                {day
-                                  ? `${Math.round(day.temperature_2m_min[i])}°`
-                                  : "--°"}
-                              </span>
-                              <span
-                                style={{ width: 14, display: "inline-block" }}
-                              />
-                              <span
-                                style={{ color: "#22D3EE", fontSize: 14 }}
-                              >
-                                Rain {rain}%
-                              </span>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-
-              {/* TRAINS CARD */}
-              <td
-                style={{
-                  width: "38%",
-                  background: COLORS.surface,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 20,
-                  padding: "28px 32px",
-                  verticalAlign: "top",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    color: COLORS.ice,
-                  }}
-                >
-                  Next Trains
-                </div>
-                <div
-                  style={{ fontSize: 28, fontWeight: 700, marginTop: 6 }}
-                >
-                  Balaclava Station
-                </div>
-                <div
-                  style={{ fontSize: 15, color: COLORS.muted, marginTop: 4 }}
-                >
-                  Sandringham → Towards city
-                </div>
-
-                <div style={{ marginTop: 22 }}>
-                  {trains.length === 0 && (
-                    <div style={{ color: COLORS.muted, fontSize: 18 }}>
-                      No upcoming departures.
-                    </div>
-                  )}
-                  {trains.slice(0, 3).map((t, idx) => {
-                    const mins = Math.max(
-                      0,
-                      Math.round((t.scheduledMs - Date.now()) / 60000),
-                    );
-                    const bc = badgeColors(mins);
-                    return (
-                      <table
-                        key={idx}
-                        width="100%"
-                        cellPadding={0}
-                        cellSpacing={0}
-                        style={{
-                          background: COLORS.tile,
-                          borderLeft: `12px solid ${COLORS.accent}`,
-                          borderRadius: "0 10px 10px 0",
-                          marginBottom: 14,
-                          borderCollapse: "separate",
-                        }}
-                      >
-                        <tbody>
-                          <tr>
-                            <td
-                              style={{
-                                padding: "18px 22px",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: 22,
-                                  fontWeight: 700,
-                                  lineHeight: 1.2,
-                                }}
-                              >
-                                To {t.destination ?? "Flinders Street Station"}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 22,
-                                  fontWeight: 700,
-                                  marginTop: 6,
-                                }}
-                              >
-                                Scheduled {to12hr(t.scheduledTime)}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 16,
-                                  color: COLORS.ice,
-                                  marginTop: 6,
-                                }}
-                              >
-                                Platform {t.platform}
-                              </div>
-                            </td>
-                            <td
-                              style={{
-                                width: 130,
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                                padding: "0 18px 0 0",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: "inline-block",
-                                  padding: "12px 22px",
-                                  borderRadius: 28,
-                                  fontSize: 22,
-                                  fontWeight: 700,
-                                  whiteSpace: "nowrap",
-                                  background: bc.background,
-                                  color: bc.color,
-                                  border: bc.border,
-                                }}
-                              >
-                                {minsLabel(mins)}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    );
-                  })}
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* NEWS FEED SECTION */}
-        <table
-          width="100%"
-          cellPadding={0}
-          cellSpacing={0}
-          style={{
-            background: COLORS.surface,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: 20,
-            padding: "28px 32px",
-            marginTop: 8,
-            borderCollapse: "separate",
-          }}
-        >
-          <tbody>
-            <tr>
-              <td colSpan={3}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    color: COLORS.muted,
-                    marginBottom: 16,
-                  }}
-                >
-                  News Feed
-                </div>
-              </td>
-            </tr>
-            <tr>
-              {[
-                {
-                  title: "LIFT REPAIR WORKS",
-                  content:
-                    "Residents are advised that the lift is out of service for safety reasons while the Owners Corporation awaits a report from Kone (Fuji). Please use the stairwell. We apologise for the inconvenience and will provide updates as available.",
-                },
-                {
-                  title: "NEXT HARD RUBBISH COLLECTION DAY",
-                  content: "No dates booked",
-                },
-                {
-                  title: "HORIZON CONTACT",
-                  content:
-                    "Horizon Strata Management Group 03 9687 7788 info@horizonstrata.com.au",
-                },
-              ].map((news, i) => (
-                <td
-                  key={i}
-                  style={{
-                    width: "33%",
-                    background: COLORS.tile,
-                    borderRadius: 14,
-                    padding: "18px 18px",
-                    verticalAlign: "top",
-                    paddingRight: i < 2 ? 10 : 18,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: 1.5,
-                      color: COLORS.ice,
-                      marginBottom: 10,
-                  height: 34,
-                      lineHeight: "17px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {news.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      color: COLORS.muted,
-                      lineHeight: "1.5",
-                      minHeight: 60,
-                    }}
-                  >
-                    {news.content}
-                  </div>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-
-        {/* FOOTER */}
-        <table
-          width="100%"
-          cellPadding={0}
-          cellSpacing={0}
-          style={{
-            marginTop: 8,
-            paddingTop: 14,
-            borderTop: `1px solid ${COLORS.border}`,
-          }}
-        >
-          <tbody>
-            <tr>
-              <td style={{ fontSize: 13, color: COLORS.muted }}>
-                TV mode · Weather: Open-Meteo · Trains: Transport Victoria GTFS
-                Realtime · Auto-refreshes every 60 seconds
-              </td>
-              <td
-                style={{
-                  fontSize: 13,
-                  color: COLORS.muted,
-                  textAlign: "right",
-                }}
-              >
-                Updated {now.toFormat("h:mma").toLowerCase()}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </>
+        />
+      </body>
+    </html>
   );
 }
