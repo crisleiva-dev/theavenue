@@ -105,17 +105,56 @@ const COLORS = {
 
 const FONT = "Arial, Helvetica, sans-serif";
 
+// Static fallback data — rendered instantly if all API fetches fail.
+// Prevents the TV from going blank while waiting for network requests.
+const FALLBACK_TRAINS: Train[] = [
+  {
+    time: "---",
+    scheduledTime: "---",
+    scheduledMs: 0,
+    minsAway: 0,
+    platform: "1",
+    isLive: false,
+    destination: "Check connections",
+    tripId: "fallback",
+    delaySec: 0,
+    delayMin: 0,
+  },
+];
+
+const FALLBACK_WEATHER = {
+  current: { temperature_2m: 0, apparent_temperature: 0, relative_humidity_2m: 0, wind_speed_10m: 0, wind_direction_10m: 0, uv_index: 0, weather_code: 0 },
+  daily: {
+    time: Array(4).fill(""),
+    temperature_2m_max: [0, 0, 0, 0],
+    temperature_2m_min: [0, 0, 0, 0],
+    weather_code: [0, 0, 0, 0],
+    precipitation_probability_max: [0, 0, 0, 0],
+  },
+};
+
 export default async function TvPage() {
   const now = DateTime.now().setZone(ZONE);
 
-  const [trains, weather] = await Promise.all([
-    fetchTrains().catch(() => [] as Train[]),
-    getWeather(),
-  ]);
+  // Fetch data with fast timeouts; use fallback if unavailable.
+  let trains: Train[] = FALLBACK_TRAINS;
+  let weather: OpenMeteoResponse | null = null;
 
-  const c = weather?.current;
-  const day = weather?.daily;
-  const wdesc = c ? WMO[c.weather_code]?.[1] ?? "Unknown" : "—";
+  try {
+    trains = await fetchTrains();
+  } catch {
+    // Use fallback
+  }
+
+  try {
+    weather = await getWeather();
+  } catch {
+    // Use fallback
+  }
+
+  const c = weather?.current || FALLBACK_WEATHER.current;
+  const day = weather?.daily || FALLBACK_WEATHER.daily;
+  const wdesc = c && c.weather_code ? WMO[c.weather_code]?.[1] ?? "—" : "Offline";
 
   return (
     <>
