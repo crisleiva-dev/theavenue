@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Design tokens ported from the original index.html :root.
+   Tailwind v4 generates utilities from these (bg-bg, text-muted, rounded-card, animate-blink, ...). */
+@theme {
+  --color-bg: #0c111d;
+  --color-surface: #141927;
+  --color-tile: rgba(255, 255, 255, 0.05);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-blue: #5b9cf6;
+  --color-teal: #22d3ee;
+  --color-ink: #eef2ff;
+  --color-ice: #ecfeff;
+  --color-muted: #64748b;
+  --color-green: #34d399;
+  --color-amber: #fbbf24;
+  --color-red: #f87171;
+  --color-accent: #06b6d4;
+
+  --radius-card: 20px;
+
+  --animate-blink: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
