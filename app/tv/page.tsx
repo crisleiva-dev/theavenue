@@ -23,13 +23,13 @@ import {
 } from "@/lib/weather";
 import type { Train } from "@/lib/types";
 
-// Render at most every 60s (matches meta-refresh interval exactly).
-// Vercel's edge cache serves subsequent requests instantly; any transient
-// upstream-API failure just keeps serving the last good cached page —
-// preventing the "white screen" state on the Philips signage display.
+// Use ISR with 60s revalidation to balance fresh data and reliability.
+// - First request: generates page with real data (or fallback if APIs fail)
+// - Subsequent requests within 60s: served from Vercel edge cache (instant)
+// - After 60s: regenerates in background, old page served while rebuilding
 //
-// CRITICAL: short timeouts on upstream fetches so slow APIs don't hang
-// the page render and trigger the TV browser's own timeout.
+// This prevents TV from going blank even if data fetch is slow.
+// ISR ensures most page views are instant; revalidation happens off the critical path.
 export const revalidate = 60;
 export const runtime = "nodejs";
 
@@ -136,25 +136,30 @@ const FALLBACK_WEATHER = {
 export default async function TvPage() {
   const now = DateTime.now().setZone(ZONE);
 
-  // Fetch data with fast timeouts; use fallback if unavailable.
-  let trains: Train[] = FALLBACK_TRAINS;
-  let weather: OpenMeteoResponse | null = null;
+  // Race real data vs 2s timeout — whichever completes first wins.
+  // This ensures sub-second page responses even if APIs are slow.
+  const timeoutPromise = new Promise((resolve) =>
+    setTimeout(() => resolve(null), 2000),
+  );
 
-  try {
-    trains = await fetchTrains();
-  } catch {
-    // Use fallback
-  }
+  const trainPromise = fetchTrains()
+    .catch(() => FALLBACK_TRAINS)
+    .then((t) => t || FALLBACK_TRAINS);
+  const weatherPromise = getWeather().then((w) => w || null);
 
-  try {
-    weather = await getWeather();
-  } catch {
-    // Use fallback
-  }
+  // Fetch in parallel with 2s hard timeout — return immediately with whatever we have.
+  const [trains, weather] = await Promise.all([
+    Promise.race([trainPromise, timeoutPromise]).then(
+      (t) => t || FALLBACK_TRAINS,
+    ),
+    Promise.race([weatherPromise, timeoutPromise]).then((w) => w || null),
+  ]);
 
   const c = weather?.current || FALLBACK_WEATHER.current;
   const day = weather?.daily || FALLBACK_WEATHER.daily;
-  const wdesc = c && c.weather_code ? WMO[c.weather_code]?.[1] ?? "—" : "Offline";
+  const wdesc = weather?.current?.weather_code
+    ? WMO[weather.current.weather_code]?.[1] ?? "Unknown"
+    : "Offline";
 
   return (
     <>
