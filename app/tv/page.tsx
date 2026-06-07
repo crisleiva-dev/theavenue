@@ -23,7 +23,12 @@ import {
 } from "@/lib/weather";
 import type { Train } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+// Render at most every 30s and serve from Vercel's edge cache in between.
+// This makes meta-refreshes sub-100ms on the TV (instead of 1–5s while the
+// page re-fetches GTFS-Realtime), and any transient upstream-API failure
+// just keeps serving the last good page — preventing the "white screen"
+// state we saw on the Philips signage display.
+export const revalidate = 30;
 export const runtime = "nodejs";
 
 const ZONE = "Australia/Melbourne";
@@ -95,8 +100,10 @@ export default async function TvPage() {
 
   return (
     <>
-      {/* React 19 hoists this to <head> automatically. */}
-      <meta httpEquiv="refresh" content="60" />
+      {/* React 19 hoists this to <head> automatically. The explicit URL form
+          ("60; url=/tv") is more reliable on older TV-embedded browsers than
+          the bare number form. */}
+      <meta httpEquiv="refresh" content="60; url=/tv" />
 
       <div
         style={{
