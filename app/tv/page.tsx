@@ -99,13 +99,32 @@ export default function TvPage() {
               // Fetch trains and weather every 30 seconds
               async function updateData() {
                 try {
+                  // Fetch trains
                   const trainsResp = await fetch('/api/trains');
                   const trains = trainsResp.ok ? await trainsResp.json() : [];
 
+                  // Fetch weather
+                  const weatherResp = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-37.8136&longitude=144.9631&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Australia/Melbourne');
+                  const weather = weatherResp.ok ? await weatherResp.json() : null;
+
+                  // Update weather card
+                  if (weather && weather.current) {
+                    const c = weather.current;
+                    const day = weather.daily;
+                    const wmos = { 0: '☀️ Clear', 1: '🌤️ Partly Cloudy', 2: '☁️ Cloudy', 3: '☁️ Overcast', 45: '🌫️ Foggy', 48: '🌫️ Foggy', 51: '🌧️ Drizzle', 53: '🌧️ Drizzle', 55: '🌧️ Drizzle', 61: '🌧️ Rain', 63: '🌧️ Rain', 65: '🌧️ Rain', 71: '❄️ Snow', 73: '❄️ Snow', 75: '❄️ Snow', 77: '❄️ Snow', 80: '🌧️ Showers', 81: '🌧️ Showers', 82: '🌧️ Showers', 85: '❄️ Snow', 86: '❄️ Snow', 95: '⛈️ Thunderstorm', 96: '⛈️ Thunderstorm', 99: '⛈️ Thunderstorm' };
+                    const [icon, desc] = (wmos[c.weather_code] || '🌡️ Unknown').split(' ');
+                    document.getElementById('weather-card').innerHTML = '<div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; margin-bottom: 16px;">Currently</div><div style="display: flex; gap: 20px; align-items: flex-start;"><div style="font-size: 180px; font-weight: 300; line-height: 0.88; font-variant-numeric: tabular-nums;">' + Math.round(c.temperature_2m) + '°</div><div style="flex: 1;"><div style="font-size: 48px; margin-bottom: 10px;">' + icon + '</div><div style="font-size: 32px; margin-bottom: 12px;">' + desc + '</div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div style="background: #1a1f2e; padding: 10px; border-radius: 8px;"><div style="font-size: 11px; color: #64748B; text-transform: uppercase;">Max</div><div style="font-size: 28px; color: #ecfeff; font-weight: bold; margin-top: 4px;">' + Math.round(day.temperature_2m_max[0]) + '°</div></div><div style="background: #1a1f2e; padding: 10px; border-radius: 8px;"><div style="font-size: 11px; color: #64748B; text-transform: uppercase;">Min</div><div style="font-size: 28px; color: #ecfeff; font-weight: bold; margin-top: 4px;">' + Math.round(day.temperature_2m_min[0]) + '°</div></div></div></div></div>';
+                  }
+
                   // Update trains card
                   if (trains.length > 0) {
-                    const t = trains[0];
-                    document.getElementById('trains-card').innerHTML = '<div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; margin-bottom: 16px; display: flex; gap: 8px; align-items: center;"><span>Next Trains</span><span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #116932; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;"><span style="width: 6px; height: 6px; background: #116932; border-radius: 50%;"></span>Live</span></div><div style="font-size: 28px; font-weight: 700; margin-top: 6px;">Balaclava Station</div><div style="font-size: 15px; color: #64748B; margin-top: 4px;">Sandringham → Towards city</div><div style="margin-top: 22px;"><div style="background: #1a1f2e; padding: 20px; border-left: 12px solid #06b6d4; margin-bottom: 14px;"><div style="font-size: 22px; font-weight: 700;">To ' + (t.destination || 'Flinders Street Station') + '</div><div style="font-size: 22px; font-weight: 700; margin-top: 6px;">Scheduled ' + t.time.replace(/:\\d+$/, '') + (t.time.includes(':') ? t.time.split(':')[0] >= 12 ? 'pm' : 'am' : '') + '</div><div style="font-size: 16px; color: #ecfeff; margin-top: 6px;">Platform ' + t.platform + '</div></div></div>';
+                    let trainsHtml = '<div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; margin-bottom: 16px; display: flex; gap: 8px; align-items: center;"><span>Next Trains</span><span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #116932; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;"><span style="width: 6px; height: 6px; background: #116932; border-radius: 50%;"></span>Live</span></div><div style="font-size: 28px; font-weight: 700; margin-top: 6px;">Balaclava Station</div><div style="font-size: 15px; color: #64748B; margin-top: 4px;">Sandringham → Towards city</div><div style="margin-top: 22px;">';
+                    for (let i = 0; i < Math.min(3, trains.length); i++) {
+                      const t = trains[i];
+                      trainsHtml += '<div style="background: #1a1f2e; padding: 20px; border-left: 12px solid #06b6d4; margin-bottom: 14px;"><div style="font-size: 20px; font-weight: 700;">To ' + (t.destination || 'Flinders Street Station') + '</div><div style="font-size: 20px; font-weight: 700; margin-top: 6px;">Scheduled ' + t.time + '</div><div style="font-size: 14px; color: #ecfeff; margin-top: 6px;">Platform ' + t.platform + '</div></div>';
+                    }
+                    trainsHtml += '</div>';
+                    document.getElementById('trains-card').innerHTML = trainsHtml;
                   }
                 } catch (e) {
                   console.error('Fetch error:', e);
