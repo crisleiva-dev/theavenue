@@ -23,20 +23,39 @@ import {
 } from "@/lib/weather";
 import type { Train } from "@/lib/types";
 
-// Render at most every 30s and serve from Vercel's edge cache in between.
-// This makes meta-refreshes sub-100ms on the TV (instead of 1–5s while the
-// page re-fetches GTFS-Realtime), and any transient upstream-API failure
-// just keeps serving the last good page — preventing the "white screen"
-// state we saw on the Philips signage display.
-export const revalidate = 30;
+// Render at most every 60s (matches meta-refresh interval exactly).
+// Vercel's edge cache serves subsequent requests instantly; any transient
+// upstream-API failure just keeps serving the last good cached page —
+// preventing the "white screen" state on the Philips signage display.
+//
+// CRITICAL: short timeouts on upstream fetches so slow APIs don't hang
+// the page render and trigger the TV browser's own timeout.
+export const revalidate = 60;
 export const runtime = "nodejs";
 
 const ZONE = "Australia/Melbourne";
 
+// Timeout wrapper: if fetch takes > N ms, return null (fail fast).
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number = 3000,
+): Promise<Response | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return r;
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
 async function getWeather(): Promise<OpenMeteoResponse | null> {
   try {
-    const r = await fetch(WEATHER_URL, { cache: "no-store" });
-    if (!r.ok) return null;
+    const r = await fetchWithTimeout(WEATHER_URL, 3000);
+    if (!r || !r.ok) return null;
     return (await r.json()) as OpenMeteoResponse;
   } catch {
     return null;
