@@ -137,22 +137,18 @@ export default async function TvPage() {
   const now = DateTime.now().setZone(ZONE);
 
   // Race real data vs 2s timeout — whichever completes first wins.
-  // This ensures sub-second page responses even if APIs are slow.
-  const timeoutPromise = new Promise((resolve) =>
-    setTimeout(() => resolve(null), 2000),
-  );
-
-  const trainPromise = fetchTrains()
-    .catch(() => FALLBACK_TRAINS)
-    .then((t) => t || FALLBACK_TRAINS);
-  const weatherPromise = getWeather().then((w) => w || null);
-
-  // Fetch in parallel with 2s hard timeout — return immediately with whatever we have.
+  // This ensures sub-2s page responses even if APIs are slow.
   const [trains, weather] = await Promise.all([
-    Promise.race([trainPromise, timeoutPromise]).then(
-      (t) => t || FALLBACK_TRAINS,
-    ),
-    Promise.race([weatherPromise, timeoutPromise]).then((w) => w || null),
+    Promise.race<Train[]>([
+      fetchTrains().catch(() => FALLBACK_TRAINS),
+      new Promise<Train[]>((resolve) =>
+        setTimeout(() => resolve(FALLBACK_TRAINS), 2000),
+      ),
+    ]),
+    Promise.race<OpenMeteoResponse | null>([
+      getWeather(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ]),
   ]);
 
   const c = weather?.current || FALLBACK_WEATHER.current;
