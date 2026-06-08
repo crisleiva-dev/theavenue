@@ -7,11 +7,10 @@ export const metadata: Metadata = {
     "Live weather and next city-bound trains from Balaclava for The Avenue.",
 };
 
-// Use device-width so the page adapts to whatever viewport the browser reports
-// (Fire TV Stick, regular browser, etc.). The dashboard CSS uses responsive
-// units (clamp, %, grid) so it scales smoothly to any viewport.
+// Tell the browser the design is 1920px wide and let it scale to fit the
+// actual viewport. Browsers honor this by auto-zooming.
 export const viewport: Viewport = {
-  width: "device-width",
+  width: 1920,
   initialScale: 1,
 };
 
