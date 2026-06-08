@@ -32,12 +32,24 @@
   }
 }
 
-html,
-body {
-  height: 100%;
+html {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
+/* Scale the 1920×1080 design to fit any viewport size.
+   On Fire TV Stick (and any device where viewport isn't exactly 1920px),
+   the design fills the screen without overflow or cutoff. */
 body {
+  width: 1920px;
+  height: 1080px;
+  transform: scale(calc(100vw / 1920));
+  transform-origin: 0 0;
+  margin: 0;
+  padding: 0;
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
