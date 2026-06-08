@@ -126,25 +126,19 @@ export default async function TvContentPage() {
   const wdesc = hasWeather ? WMO[c.weather_code]?.[1] ?? "Unknown" : "Offline";
 
   return (
-    <html>
-      <head>
-        <title>The Avenue</title>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body
-        style={{
-          width: "100%",
-          minHeight: "100vh",
-          background: COLORS.bg,
-          color: COLORS.ink,
-          fontFamily: FONT,
-          padding: "24px 48px 20px 48px",
-          margin: 0,
-          overflow: "hidden",
-          boxSizing: "border-box",
-        }}
-      >
+    <div
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        background: COLORS.bg,
+        color: COLORS.ink,
+        fontFamily: FONT,
+        padding: "24px 48px 20px 48px",
+        margin: 0,
+        overflow: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
         {/* HEADER */}
         <table
           width="100%"
@@ -442,7 +436,6 @@ export default async function TvContentPage() {
             </tr>
           </tbody>
         </table>
-      </body>
-    </html>
+      </div>
   );
 }
