@@ -19,9 +19,9 @@ import {
 } from "@/lib/weather";
 import type { Train } from "@/lib/types";
 
-// ISR: regenerate at most every 30s; serve from edge cache between regenerations.
-// Most requests are instant (cached); regeneration happens in the background.
-export const revalidate = 30;
+// ISR: regenerate at most every 60s; aligned with meta-refresh.
+// Most requests are served instantly from edge cache.
+export const revalidate = 60;
 export const runtime = "nodejs";
 
 const ZONE = "Australia/Melbourne";
@@ -91,7 +91,11 @@ function to12hr(hhmm: string): string {
 
 function badgeStyle(mins: number) {
   if (mins <= 2)
-    return { background: "#5B9CF6", color: "#ffffff", border: "1px solid #5B9CF6" };
+    return {
+      background: "#1e3a5f",
+      color: "#5B9CF6",
+      border: "1px solid #5B9CF6",
+    };
   if (mins <= 10)
     return {
       background: "#3a2d10",
@@ -102,7 +106,7 @@ function badgeStyle(mins: number) {
 }
 
 function minsLabel(mins: number): string {
-  if (mins === 0) return "NOW";
+  if (mins === 0) return "Arriving";
   if (mins === 1) return "1 min";
   return `${mins} mins`;
 }
@@ -137,21 +141,23 @@ export default async function TvPage() {
       <head>
         <title>The Avenue Residence Portal</title>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=1920, initial-scale=1" />
-        {/* Meta-refresh forces a full page reload every 60s — clears WebView
-            state to prevent memory issues on basic Android WebView. */}
-        <meta httpEquiv="refresh" content="60; url=/tv" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Use the bare-number meta-refresh form — more compatible with old
+            Android WebView than the "url=" form which sometimes breaks. */}
+        <meta httpEquiv="refresh" content="60" />
       </head>
       <body
         style={{
-          width: "1920px",
-          height: "1080px",
+          width: "100%",
+          maxWidth: "1920px",
+          minHeight: "100vh",
           background: COLORS.bg,
           color: COLORS.ink,
           fontFamily: FONT,
-          padding: "20px 36px 18px 36px",
-          margin: 0,
+          padding: "24px 48px 20px 48px",
+          margin: "0 auto",
           overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {/* HEADER */}
@@ -335,58 +341,61 @@ export default async function TvPage() {
                   {trains.length === 0 && (
                     <div style={{ color: COLORS.muted, fontSize: 18 }}>No upcoming departures.</div>
                   )}
-                  {trains.slice(0, 3).map((t, idx) => {
-                    const mins = Math.max(0, Math.round((t.scheduledMs - nowMs) / 60000));
-                    const bc = badgeStyle(mins);
-                    return (
-                      <table
-                        key={idx}
-                        width="100%"
-                        cellPadding={0}
-                        cellSpacing={0}
-                        style={{
-                          background: COLORS.tile,
-                          borderLeft: `12px solid ${COLORS.accent}`,
-                          borderRadius: "0 10px 10px 0",
-                          marginBottom: 14,
-                          borderCollapse: "separate",
-                        }}
-                      >
-                        <tbody>
-                          <tr>
-                            <td style={{ padding: "18px 22px", verticalAlign: "middle" }}>
-                              <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
-                                To {t.destination ?? "Flinders Street Station"}
-                              </div>
-                              <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>
-                                Scheduled {to12hr(t.scheduledTime)}
-                              </div>
-                              <div style={{ fontSize: 16, color: COLORS.ice, marginTop: 6 }}>
-                                Platform {t.platform}
-                              </div>
-                            </td>
-                            <td style={{ width: 130, textAlign: "center", verticalAlign: "middle", padding: "0 18px 0 0" }}>
-                              <span
-                                style={{
-                                  display: "inline-block",
-                                  padding: "12px 22px",
-                                  borderRadius: 28,
-                                  fontSize: 22,
-                                  fontWeight: 700,
-                                  whiteSpace: "nowrap",
-                                  background: bc.background,
-                                  color: bc.color,
-                                  border: bc.border,
-                                }}
-                              >
-                                {minsLabel(mins)}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    );
-                  })}
+                  {trains
+                    .filter((t) => t.scheduledMs - nowMs > -60000)
+                    .slice(0, 3)
+                    .map((t, idx) => {
+                      const mins = Math.max(0, Math.round((t.scheduledMs - nowMs) / 60000));
+                      const bc = badgeStyle(mins);
+                      return (
+                        <table
+                          key={idx}
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          style={{
+                            background: COLORS.tile,
+                            borderLeft: `12px solid ${COLORS.accent}`,
+                            borderRadius: "0 10px 10px 0",
+                            marginBottom: 14,
+                            borderCollapse: "separate",
+                          }}
+                        >
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: "18px 22px", verticalAlign: "middle" }}>
+                                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
+                                  To {t.destination ?? "Flinders Street Station"}
+                                </div>
+                                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>
+                                  Scheduled {to12hr(t.scheduledTime)}
+                                </div>
+                                <div style={{ fontSize: 16, color: COLORS.ice, marginTop: 6 }}>
+                                  Platform {t.platform}
+                                </div>
+                              </td>
+                              <td style={{ width: 130, textAlign: "center", verticalAlign: "middle", padding: "0 18px 0 0" }}>
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    padding: "12px 22px",
+                                    borderRadius: 28,
+                                    fontSize: 22,
+                                    fontWeight: 700,
+                                    whiteSpace: "nowrap",
+                                    background: bc.background,
+                                    color: bc.color,
+                                    border: bc.border,
+                                  }}
+                                >
+                                  {minsLabel(mins)}
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      );
+                    })}
                 </div>
               </td>
             </tr>
