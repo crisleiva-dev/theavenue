@@ -7,9 +7,12 @@ export const metadata: Metadata = {
     "Live weather and next city-bound trains from Balaclava for The Avenue.",
 };
 
-// Fixed-width layout tuned for the lobby TV (matches the original meta viewport).
+// Use device-width so the page adapts to whatever viewport the browser reports
+// (Fire TV Stick, regular browser, etc.). The dashboard CSS uses responsive
+// units (clamp, %, grid) so it scales smoothly to any viewport.
 export const viewport: Viewport = {
-  width: 1920,
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
