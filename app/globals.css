@@ -32,9 +32,22 @@
   }
 }
 
+/* Defensive CSS for older WebViews (Fully Kiosk Browser, basic Android
+   WebViews). Tailwind v4's preflight should include box-sizing, but some
+   WebViews don't fully apply it — explicit rules below override any gaps. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 body {
@@ -43,4 +56,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
     system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent flex/grid children from overflowing their containers — common
+   issue on older WebViews where min-width: auto defaults cause overflow. */
+* {
+  min-width: 0;
+  min-height: 0;
 }
