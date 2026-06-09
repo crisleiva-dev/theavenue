@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import WeatherCard from "./WeatherCard";
 import TrainsCard from "./TrainsCard";
+import NewsCard from "./NewsCard";
 import {
   WEATHER_URL,
   WMO,
@@ -129,12 +130,13 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="h-screen grid grid-rows-[auto_1fr_auto] px-9 pt-5 pb-[18px] gap-4 overflow-hidden">
+    <div className="h-screen grid grid-rows-[auto_minmax(0,3fr)_minmax(0,1fr)_auto] px-9 pt-5 pb-[18px] gap-4 overflow-hidden">
       <Header time={time} date={date} />
       <main className="grid grid-cols-[62%_1fr] gap-4 min-h-0">
         <WeatherCard weather={weather} error={weatherError} />
         <TrainsCard trains={trains} error={trainsError} />
       </main>
+      <NewsCard />
       <footer className="flex justify-between items-center pt-[14px] border-t border-line text-[0.78rem] text-muted">
         <div className="flex items-center gap-[10px]">
           <span className="w-2 h-2 bg-green rounded-full shrink-0 animate-blink" />
