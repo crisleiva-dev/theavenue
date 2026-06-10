@@ -44,26 +44,27 @@ export default function TrainsCard({
     const nowMs = Date.now();
     body = trains.map((t, i) => {
       // Minutes left = scheduled departure − the currently displayed time.
-      // Recomputed on every render (the 1s header clock re-renders this card).
       const mins = Math.max(0, Math.round((t.scheduledMs - nowMs) / 60000));
       return (
         <div
           key={t.tripId || i}
-          className={`bg-tile p-[20px_24px] flex items-center gap-[14px] border-l-[14px] border-l-accent flex-1 min-h-0 ${
+          className={`bg-tile p-[16px_20px] flex items-center gap-[14px] border-l-[12px] border-l-accent flex-1 min-h-0 ${
             i < trains.length - 1 ? "border-b border-b-line" : ""
           }`}
         >
-          <div className="flex-1 min-w-0 flex flex-col gap-2">
-            <div className="text-[1.6rem] font-bold leading-[1.2] text-ink whitespace-nowrap">
+          <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+            <div className="text-[1.15rem] font-bold leading-[1.2] text-ink whitespace-nowrap">
               To {t.destination ?? "Flinders Street Station"}
             </div>
-            <div className="text-[1.6rem] font-bold text-ink">
+            <div className="text-[1.15rem] font-bold text-ink">
               Scheduled {to12hr(t.scheduledTime)}
             </div>
-            <div className="text-[1.25rem] text-ice">Platform {t.platform}</div>
+            <div className="text-[0.9rem] text-muted">
+              Platform {t.platform}
+            </div>
           </div>
           <span
-            className={`shrink-0 px-[28px] py-[12px] rounded-[38px] text-[1.7rem] font-bold whitespace-nowrap ${badgeClasses(
+            className={`shrink-0 px-[22px] py-[10px] rounded-[38px] text-[1.3rem] font-bold whitespace-nowrap ${badgeClasses(
               mins,
             )}`}
           >
@@ -76,29 +77,21 @@ export default function TrainsCard({
 
   return (
     <div className="bg-surface border border-line rounded-card p-[28px_32px] flex flex-col gap-4 min-h-0 overflow-hidden">
-      <div className="flex items-start gap-[14px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="w-[50px] h-[50px] shrink-0 mt-[2px]"
-          src="/tram.svg"
-          alt="Train"
-        />
-        <div>
-          <div className="flex items-center gap-[10px] mb-1">
-            <span className="text-[0.69rem] uppercase tracking-[0.12em] text-ice">
-              Next Trains
-            </span>
-            <span className="inline-flex items-center gap-1 bg-[#dcfce7] text-[#116932] text-[0.625rem] font-semibold px-[6px] py-[2px] rounded-[4px] leading-[14px]">
-              <span className="w-[6px] h-[6px] bg-[#116932] rounded-full shrink-0" />
-              Live
-            </span>
-          </div>
-          <div className="text-[1.5rem] font-bold leading-[1.1] whitespace-nowrap">
-            Balaclava Station
-          </div>
-          <div className="text-[0.85rem] text-muted mt-1 font-medium">
-            Sandringham | Towards city
-          </div>
+      <div>
+        <div className="flex items-center gap-[10px] mb-1">
+          <span className="text-[0.85rem] uppercase tracking-[0.12em] text-muted">
+            Next Trains
+          </span>
+          <span className="inline-flex items-center gap-1 bg-[#dcfce7] text-[#116932] text-[0.7rem] font-semibold px-[6px] py-[2px] rounded-[4px] leading-[14px]">
+            <span className="w-[6px] h-[6px] bg-[#116932] rounded-full shrink-0" />
+            Live
+          </span>
+        </div>
+        <div className="text-[1.5rem] font-bold leading-[1.1] whitespace-nowrap text-ink">
+          Balaclava Station
+        </div>
+        <div className="text-[0.95rem] text-teal mt-1 font-medium">
+          Sandringham | Towards city
         </div>
       </div>
 

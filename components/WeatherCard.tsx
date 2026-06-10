@@ -38,22 +38,22 @@ export default function WeatherCard({
         <div className="text-[0.85rem] uppercase tracking-[0.12em] text-muted shrink-0">
           Currently
         </div>
-        {/* Hero row: temp | icon | desc | max | min — all horizontal */}
-        <div className="flex flex-row items-center gap-8 flex-1 min-h-0">
+        {/* Hero row: temp | icon | desc | max | min — all horizontal, tight grouping */}
+        <div className="flex flex-row items-center gap-6 flex-1 min-h-0">
           <div className="text-[clamp(6rem,10vw,12rem)] font-thin leading-none tabular-nums whitespace-nowrap shrink-0">
             {w?.temp ?? "--°"}
           </div>
-          <div className="text-[4rem] leading-none shrink-0">
+          <div className="text-[3.5rem] leading-none shrink-0">
             {w?.icon ?? "🌡️"}
           </div>
-          <div className="text-[2.4rem] font-normal leading-tight flex-1 min-w-0">
+          <div className="text-[2.2rem] font-normal leading-tight shrink-0">
             {desc}
           </div>
-          <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="flex flex-col items-center gap-1 shrink-0 ml-2">
             <span className="text-[0.95rem] uppercase tracking-[0.1em] text-muted">
               Max
             </span>
-            <span className="text-[2.4rem] font-semibold tabular-nums text-ice leading-none">
+            <span className="text-[2.2rem] font-semibold tabular-nums text-ice leading-none">
               {w?.max ?? "--°"}
             </span>
           </div>
@@ -61,7 +61,7 @@ export default function WeatherCard({
             <span className="text-[0.95rem] uppercase tracking-[0.1em] text-muted">
               Min
             </span>
-            <span className="text-[2.4rem] font-semibold tabular-nums text-ice leading-none">
+            <span className="text-[2.2rem] font-semibold tabular-nums text-ice leading-none">
               {w?.min ?? "--°"}
             </span>
           </div>

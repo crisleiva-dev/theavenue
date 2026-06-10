@@ -19,7 +19,7 @@ export default function Header({
             The Avenue Residence Portal
           </div>
           <div className="text-[0.88rem] text-muted mt-[3px]">
-            Melbourne, Victoria
+            Balaclava, Melbourne, Victoria
           </div>
         </div>
       </div>
