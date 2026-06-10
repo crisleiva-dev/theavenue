@@ -30,43 +30,41 @@ export default function WeatherCard({
   weather: WeatherVM | null;
   error: boolean;
 }) {
-  const desc = error && !w ? "Unavailable — check connection" : w?.desc ?? "Loading…";
+  const desc = error && !w ? "Unavailable" : w?.desc ?? "Loading…";
 
   return (
     <div className="bg-surface border border-line rounded-card p-[28px_32px] flex flex-col gap-4 min-h-0 overflow-hidden">
-      <div className="flex flex-col flex-1 min-h-0 gap-1">
+      <div className="flex flex-col flex-1 min-h-0 gap-3">
         <div className="text-[0.85rem] uppercase tracking-[0.12em] text-muted shrink-0">
           Currently
         </div>
-        <div className="flex flex-row items-stretch gap-10 flex-1 min-h-0">
-          <div className="text-[clamp(6rem,13vw,14rem)] font-thin leading-[0.88] tracking-[-0.04em] tabular-nums whitespace-nowrap shrink-0">
+        {/* Hero row: temp | icon | desc | max | min — all horizontal */}
+        <div className="flex flex-row items-center gap-8 flex-1 min-h-0">
+          <div className="text-[clamp(6rem,10vw,12rem)] font-thin leading-none tabular-nums whitespace-nowrap shrink-0">
             {w?.temp ?? "--°"}
           </div>
-          <div className="flex flex-col justify-start gap-[10px] py-[2px]">
-            <div className="text-[5rem] leading-none">{w?.icon ?? "🌡️"}</div>
-            <div className="text-[3.4rem] font-normal leading-[1.1]">{desc}</div>
-            <div className="flex gap-10 mt-[6px]">
-              <div className="flex flex-col gap-[2px]">
-                <span className="text-[1.05rem] uppercase tracking-[0.1em] text-muted">
-                  Max
-                </span>
-                <span className="text-[3.2rem] font-semibold tabular-nums text-ice">
-                  {w?.max ?? "--°"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-[2px]">
-                <span className="text-[1.05rem] uppercase tracking-[0.1em] text-muted">
-                  Min
-                </span>
-                <span className="text-[3.2rem] font-semibold tabular-nums text-ice">
-                  {w?.min ?? "--°"}
-                </span>
-              </div>
-            </div>
+          <div className="text-[4rem] leading-none shrink-0">
+            {w?.icon ?? "🌡️"}
           </div>
-        </div>
-        <div className="text-[0.8rem] text-muted shrink-0">
-          {w ? `Updated ${w.updated}` : "Fetching…"}
+          <div className="text-[2.4rem] font-normal leading-tight flex-1 min-w-0">
+            {desc}
+          </div>
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <span className="text-[0.95rem] uppercase tracking-[0.1em] text-muted">
+              Max
+            </span>
+            <span className="text-[2.4rem] font-semibold tabular-nums text-ice leading-none">
+              {w?.max ?? "--°"}
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <span className="text-[0.95rem] uppercase tracking-[0.1em] text-muted">
+              Min
+            </span>
+            <span className="text-[2.4rem] font-semibold tabular-nums text-ice leading-none">
+              {w?.min ?? "--°"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -95,11 +93,9 @@ export default function WeatherCard({
               <span className="text-[1.05rem] font-medium tabular-nums text-ice">
                 Min {f.min}
               </span>
-              {f.rain > 10 && (
-                <span className="text-[0.78rem] text-teal ml-auto">
-                  💧 {f.rain}%
-                </span>
-              )}
+              <span className="text-[0.78rem] text-teal ml-auto">
+                💧 {f.rain}%
+              </span>
             </div>
           </div>
         ))}
