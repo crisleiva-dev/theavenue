@@ -39,7 +39,7 @@ export default function WeatherCard({
           Currently
         </div>
         <div className="flex flex-row items-stretch gap-10 flex-1 min-h-0">
-          <div className="text-[clamp(10rem,22vw,28rem)] font-thin leading-[0.88] tracking-[-0.04em] tabular-nums whitespace-nowrap shrink-0">
+          <div className="text-[clamp(6rem,13vw,14rem)] font-thin leading-[0.88] tracking-[-0.04em] tabular-nums whitespace-nowrap shrink-0">
             {w?.temp ?? "--°"}
           </div>
           <div className="flex flex-col justify-start gap-[10px] py-[2px]">
