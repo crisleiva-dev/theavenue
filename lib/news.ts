@@ -12,11 +12,15 @@ export interface NewsItem {
 
 const DEFAULT_ITEMS: NewsItem[] = [
   {
+    title: "Front Door Intercom",
+    content:
+      "The front entry intercom is currently non-functional. Please use the garage door for access as this remains operational. A temporary solution is underway, and further updates will be shared shortly.",
+  },
+  {
     title: "Lift Repair Works",
     content:
-      "Residents are advised that the lift is out of service for safety reasons while the Owners Corporation awaits a report from Kone (Fuji). Please use the stairwell. We apologise for the inconvenience.",
+      "The lift remains out of service for safety reasons. We are waiting on the contractor KONE to provide exact repair dates. The Committee is actively escalating this issue due to unacceptable delays and sincerely acknowledges the ongoing inconvenience caused.",
   },
-  { title: "Next Hard Rubbish Collection Day", content: "TBC" },
   {
     title: "Horizon Contact",
     content:
