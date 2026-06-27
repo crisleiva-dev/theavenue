@@ -12,14 +12,9 @@ export interface NewsItem {
 
 const DEFAULT_ITEMS: NewsItem[] = [
   {
-    title: "Front Door Intercom",
-    content:
-      "The front entry intercom is currently non-functional. Please use the garage door for access as this remains operational. A temporary solution is underway, and further updates will be shared shortly.",
-  },
-  {
     title: "Lift Repair Works",
     content:
-      "The lift remains out of service for safety reasons. We are waiting on the contractor KONE to provide exact repair dates. The Committee is actively escalating this issue due to unacceptable delays and sincerely acknowledges the ongoing inconvenience caused.",
+      "Repair works have been scheduled and are now underway. KONE is on site working through the required parts and inspections. Thank you for your patience — the Committee will share an update once a return-to-service date is confirmed.",
   },
   {
     title: "Horizon Contact",
