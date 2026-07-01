@@ -48,23 +48,21 @@ export default function TrainsCard({
       return (
         <div
           key={t.tripId || i}
-          className={`bg-tile p-[16px_20px] flex items-center gap-[14px] border-l-[12px] border-l-accent flex-1 min-h-0 ${
-            i < trains.length - 1 ? "border-b border-b-line" : ""
-          }`}
+          className="bg-tile rounded-[16px] px-7 py-6 flex items-center justify-between gap-4 border-l-[12px] border-l-accent"
         >
-          <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-            <div className="text-[1.15rem] font-bold leading-[1.2] text-ink whitespace-nowrap">
+          <div className="min-w-0 flex flex-col gap-[5px]">
+            <div className="text-[1.4rem] font-bold leading-[1.15] text-ink whitespace-nowrap">
               To {t.destination ?? "Flinders Street Station"}
             </div>
-            <div className="text-[1.15rem] font-bold text-ink">
+            <div className="text-[1.4rem] font-bold leading-[1.15] text-ink">
               Scheduled {to12hr(t.scheduledTime)}
             </div>
-            <div className="text-[0.9rem] text-muted">
+            <div className="text-[1rem] text-muted mt-[2px]">
               Platform {t.platform}
             </div>
           </div>
           <span
-            className={`shrink-0 px-[22px] py-[10px] rounded-[38px] text-[1.3rem] font-bold whitespace-nowrap ${badgeClasses(
+            className={`shrink-0 px-[24px] py-[12px] rounded-[38px] text-[1.35rem] font-bold whitespace-nowrap ${badgeClasses(
               mins,
             )}`}
           >
@@ -76,28 +74,26 @@ export default function TrainsCard({
   }
 
   return (
-    <div className="bg-surface border border-line rounded-card p-[28px_32px] flex flex-col gap-4 min-h-0 overflow-hidden">
-      <div>
-        <div className="flex items-center gap-[10px] mb-1">
-          <span className="text-[0.85rem] uppercase tracking-[0.12em] text-muted">
+    <div className="bg-surface border border-line rounded-card p-[32px_34px] flex flex-col gap-6 min-h-0 overflow-hidden">
+      <div className="shrink-0">
+        <div className="flex items-center gap-[10px] mb-2">
+          <span className="text-[0.9rem] uppercase tracking-[0.12em] text-muted">
             Next Trains
           </span>
-          <span className="inline-flex items-center gap-1 bg-[#dcfce7] text-[#116932] text-[0.7rem] font-semibold px-[6px] py-[2px] rounded-[4px] leading-[14px]">
+          <span className="inline-flex items-center gap-1 bg-[#dcfce7] text-[#116932] text-[0.72rem] font-semibold px-[7px] py-[3px] rounded-[4px] leading-[14px]">
             <span className="w-[6px] h-[6px] bg-[#116932] rounded-full shrink-0" />
             Live
           </span>
         </div>
-        <div className="text-[1.5rem] font-bold leading-[1.1] whitespace-nowrap text-ink">
+        <div className="text-[2.2rem] font-bold leading-[1.1] whitespace-nowrap text-ink">
           Balaclava Station
         </div>
-        <div className="text-[0.95rem] text-teal mt-1 font-medium">
+        <div className="text-[1.35rem] text-teal mt-2 font-bold">
           Sandringham | Towards city
         </div>
       </div>
 
-      <div className="flex flex-col gap-0 flex-1 min-h-0 overflow-hidden rounded-xl">
-        {body}
-      </div>
+      <div className="flex flex-col gap-8 flex-1 min-h-0">{body}</div>
     </div>
   );
 }
