@@ -59,6 +59,7 @@ export default function TrainsCard({
             </div>
             <div className="text-[1rem] text-muted mt-[2px]">
               Platform {t.platform}
+              {t.via ? ` · via ${t.via}` : ""}
             </div>
           </div>
           <span

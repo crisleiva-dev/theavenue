@@ -30,6 +30,24 @@ function toNum(v: unknown): number {
   return Number(v);
 }
 
+// Since the 2026-08 timetable change, city-bound trips run through Flinders
+// Street and headsigns name the far terminus ("Laverton via Flinders Street").
+// Split the two so the card can show the terminus and the via leg separately,
+// the way PTV does. Parsed here rather than in the cache so an existing
+// gtfs_cache.json keeps working unchanged.
+function parseHeadsign(headsign: string): {
+  destination: string;
+  via: string | null;
+} {
+  const m = headsign.match(/^(.*?)\s+via\s+(.*)$/i);
+  const terminus = (m ? m[1] : headsign).trim();
+  const via = m ? m[2].trim() : null;
+  return {
+    destination: terminus.includes("Station") ? terminus : `${terminus} Station`,
+    via,
+  };
+}
+
 interface RealtimeEntry {
   depUtc: DateTime;
   delaySec: number;
@@ -126,7 +144,7 @@ export async function fetchTrains(): Promise<Train[]> {
         ? Math.round(actualDep.diff(scheduledDep, "minutes").minutes)
         : 0;
 
-      const headsign = entry.headsign;
+      const { destination, via } = parseHeadsign(entry.headsign);
       results.push({
         time: actualDep.toFormat("HH:mm"),
         scheduledTime: scheduledDep.toFormat("HH:mm"),
@@ -134,9 +152,8 @@ export async function fetchTrains(): Promise<Train[]> {
         minsAway: mins,
         platform: "1",
         isLive: rt != null,
-        destination: headsign.includes("Station")
-          ? headsign
-          : `${headsign} Station`,
+        destination,
+        via,
         tripId: entry.tripId,
         delaySec: rt ? rt.delaySec : 0,
         delayMin,

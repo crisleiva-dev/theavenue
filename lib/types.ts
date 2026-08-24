@@ -8,6 +8,7 @@ export interface Train {
   platform: string;
   isLive: boolean;
   destination: string;
+  via: string | null; // "Flinders Street" when the trip runs through the city, else null
   tripId: string;
   delaySec: number; // raw delay from the realtime feed (seconds)
   delayMin: number; // live − scheduled, in minutes

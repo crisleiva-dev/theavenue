@@ -24,13 +24,28 @@ const GTFS_URL =
 const BALACLAVA_STOP = "14288";
 const LOOKAHEAD_DAYS = 14;
 const ZONE = "Australia/Melbourne";
-const CITY_HEADSIGNS = new Set([
+const CITY_STATIONS = [
   "Flinders Street",
   "Southern Cross",
   "Parliament",
   "Melbourne Central",
   "Flagstaff",
-]);
+];
+
+// Healthy count is ~1200. The 2026-08 timetable change silently cut it to 238
+// by renaming through-running headsigns, so fail loudly rather than ship a
+// cache that leaves the TV showing trains 13 hours away.
+const MIN_EXPECTED_DEPARTURES = 500;
+
+// City-bound headsigns either ARE a city station ("Flinders Street") or name a
+// terminus reached through one ("Laverton via Flinders Street"). Outbound
+// Sandringham trips match neither.
+function isCityBound(headsign: string): boolean {
+  if (!headsign) return false;
+  return CITY_STATIONS.some(
+    (s) => headsign === s || headsign.includes(`via ${s}`),
+  );
+}
 
 const OUT_PATH = path.join(process.cwd(), "data", "gtfs_cache.json");
 
@@ -164,7 +179,7 @@ async function main() {
 
   // city-bound Balaclava departures only
   const balaclavaDepartures = balRows
-    .filter((r) => CITY_HEADSIGNS.has(tripHeadsigns[r.tripId]))
+    .filter((r) => isCityBound(tripHeadsigns[r.tripId]))
     .map((r) => ({
       time: r.dep.slice(0, 5),
       tripId: r.tripId,
@@ -179,6 +194,14 @@ async function main() {
   console.log(
     `  ${Object.keys(activeDates).length} active service IDs (next ${LOOKAHEAD_DAYS} days)`,
   );
+
+  if (balaclavaDepartures.length < MIN_EXPECTED_DEPARTURES) {
+    throw new Error(
+      `Only ${balaclavaDepartures.length} city-bound departures found ` +
+        `(expected >= ${MIN_EXPECTED_DEPARTURES}). Headsign format has likely ` +
+        `changed — check isCityBound() against current trip_headsign values.`,
+    );
+  }
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(
