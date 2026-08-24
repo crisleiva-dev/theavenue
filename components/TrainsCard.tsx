@@ -57,9 +57,14 @@ export default function TrainsCard({
             <div className="text-[1.4rem] font-bold leading-[1.15] text-ink">
               Scheduled {to12hr(t.scheduledTime)}
             </div>
-            <div className="text-[1rem] text-muted mt-[2px]">
+            <div className="text-[1rem] text-ink mt-[2px]">
               Platform {t.platform}
-              {t.via ? ` · via ${t.via}` : ""}
+              {t.via ? (
+                <>
+                  {" · "}
+                  <span className="font-bold">via {t.via}</span>
+                </>
+              ) : null}
             </div>
           </div>
           <span
