@@ -36,7 +36,9 @@ export default function TrainsCard({
     body = (
       <div className="text-muted text-base py-4">Departure data unavailable</div>
     );
-  } else if (trains == null || nowMs === 0) {
+    // Guard on Array rather than null: if the API shape ever drifts again, show
+    // the loading state instead of crashing the card on .map().
+  } else if (!Array.isArray(trains) || nowMs === 0) {
     body = <div className="text-muted text-base py-4">Loading departures…</div>;
   } else if (trains.length === 0) {
     body = (

@@ -128,15 +128,26 @@ export default function Dashboard() {
         const sentAt = Date.now();
         const r = await fetch("/api/trains");
         if (!r.ok) throw new Error("Server error " + r.status);
-        const data: TrainsResponse = await r.json();
+        const data: Train[] | TrainsResponse = await r.json();
         if (!cancelled) {
-          // Re-anchor to the server's clock. Charge half the round trip to the
-          // response leg so network latency doesn't skew the offset.
-          if (typeof data.nowMs === "number") {
+          // Accept a bare array (current) or { nowMs, trains } (briefly shipped
+          // 2026-08-27), so neither side of a deploy can break the other.
+          const list = Array.isArray(data) ? data : data?.trains ?? [];
+
+          // Re-anchor to the server's clock, preferring the header. Charge half
+          // the round trip to the response leg so latency doesn't skew it.
+          const header = Number(r.headers.get("x-server-now-ms"));
+          const serverMs = Number.isFinite(header)
+            ? header
+            : !Array.isArray(data) && typeof data?.nowMs === "number"
+              ? data.nowMs
+              : NaN;
+          if (Number.isFinite(serverMs)) {
             const rtt = Date.now() - sentAt;
-            clockOffsetRef.current = data.nowMs + rtt / 2 - Date.now();
+            clockOffsetRef.current = serverMs + rtt / 2 - Date.now();
           }
-          setTrains(data.trains ?? []);
+
+          setTrains(list);
           setTrainsError(false);
           setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
         }
