@@ -47,6 +47,12 @@ export default function Dashboard() {
   const clockOffsetRef = useRef(0);
   const serverNow = () => Date.now() + clockOffsetRef.current;
 
+  // Build id seen on the first poll after this page loaded. If a later poll
+  // reports a different one, a new version has been deployed and the TV — which
+  // otherwise keeps its boot-time bundle until the next power cycle — reloads.
+  const buildIdRef = useRef<string | null>(null);
+  const loadedAtRef = useRef(0);
+
   // Clock — every second, anchored to server time.
   useEffect(() => {
     const tick = () => {
@@ -80,6 +86,30 @@ export default function Dashboard() {
   // Weather (client-side, 5 min) + trains (proxy, 30 s).
   useEffect(() => {
     let cancelled = false;
+    loadedAtRef.current = Date.now();
+
+    // Reload when the deployed build changes, with guards so the unattended TV
+    // can never end up in a reload loop: ignore the first 2 minutes after load
+    // (Vercel can briefly serve old and new instances side by side during a
+    // rollout), and refuse to reload more than once every 10 minutes.
+    function maybeReloadForNewBuild(id: string | null) {
+      if (!id) return;
+      if (buildIdRef.current === null) {
+        buildIdRef.current = id;
+        return;
+      }
+      if (id === buildIdRef.current) return;
+      if (Date.now() - loadedAtRef.current < 120_000) return;
+      try {
+        const last = Number(sessionStorage.getItem("tav_last_reload") ?? 0);
+        if (Date.now() - last < 600_000) return;
+        sessionStorage.setItem("tav_last_reload", String(Date.now()));
+      } catch {
+        // sessionStorage unavailable — the uptime guard above still applies.
+      }
+      console.info("New build detected, reloading:", buildIdRef.current, "->", id);
+      window.location.reload();
+    }
 
     async function fetchWeather() {
       try {
@@ -150,6 +180,8 @@ export default function Dashboard() {
           setTrains(list);
           setTrainsError(false);
           setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
+
+          maybeReloadForNewBuild(r.headers.get("x-build-id"));
         }
       } catch (e) {
         console.error("Train fetch failed:", e);
