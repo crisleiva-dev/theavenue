@@ -14,6 +14,14 @@ export interface Train {
   delayMin: number; // live − scheduled, in minutes
 }
 
+// /api/trains response. `nowMs` is the server's clock at the moment the
+// response was built — the client uses it to correct for device clock drift
+// rather than trusting the Fire TV Stick's own time.
+export interface TrainsResponse {
+  nowMs: number;
+  trains: Train[];
+}
+
 export interface ForecastTile {
   day: string;
   icon: string;

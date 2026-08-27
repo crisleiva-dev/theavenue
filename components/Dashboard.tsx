@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import WeatherCard from "./WeatherCard";
 import TrainsCard from "./TrainsCard";
@@ -12,13 +12,20 @@ import {
   forecastDayLabel,
   type OpenMeteoResponse,
 } from "@/lib/weather";
-import type { Train, WeatherVM } from "@/lib/types";
+import type { Train, TrainsResponse, WeatherVM } from "@/lib/types";
 
 // Flip to true to show the News Feed section on the dashboard.
 const NEWS_ENABLED = false;
 
-function nowHM(): string {
-  return new Date().toLocaleTimeString("en-AU", {
+// Pin every displayed time to Melbourne rather than inheriting the device's
+// timezone. The Fire TV Stick renders this page, so without it a mis-set
+// region on the stick would show the wrong clock while the server-computed
+// train times stayed correct — a confusingly half-wrong screen.
+const TZ = "Australia/Melbourne";
+
+function nowHM(ms: number): string {
+  return new Date(ms).toLocaleTimeString("en-AU", {
+    timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -32,13 +39,23 @@ export default function Dashboard() {
   const [trains, setTrains] = useState<Train[] | null>(null);
   const [trainsError, setTrainsError] = useState(false);
   const [lastRefresh, setLastRefresh] = useState("Initialising…");
+  const [nowMs, setNowMs] = useState(0);
 
-  // Clock — every second.
+  // Difference between the server's clock and this device's, refreshed on every
+  // successful /api/trains poll. A ref (not state) so updating it doesn't tear
+  // down the 1s clock interval below.
+  const clockOffsetRef = useRef(0);
+  const serverNow = () => Date.now() + clockOffsetRef.current;
+
+  // Clock — every second, anchored to server time.
   useEffect(() => {
     const tick = () => {
-      const now = new Date();
+      const ms = serverNow();
+      setNowMs(ms);
+      const now = new Date(ms);
       setTime(
         now.toLocaleTimeString("en-AU", {
+          timeZone: TZ,
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
@@ -47,6 +64,7 @@ export default function Dashboard() {
       );
       setDate(
         now.toLocaleDateString("en-AU", {
+          timeZone: TZ,
           weekday: "long",
           day: "numeric",
           month: "long",
@@ -81,7 +99,7 @@ export default function Dashboard() {
           humidity: `${c.relative_humidity_2m}%`,
           wind: `${Math.round(c.wind_speed_10m)} km/h ${compassDir(c.wind_direction_10m ?? 0)}`,
           uv: `${Math.round(c.uv_index ?? 0)}`,
-          updated: nowHM(),
+          updated: nowHM(serverNow()),
           forecast: [1, 2, 3].map((i) => {
             const [fi, fd] = WMO[day.weather_code[i]] ?? ["🌡️", ""];
             return {
@@ -97,7 +115,7 @@ export default function Dashboard() {
         if (!cancelled) {
           setWeather(vm);
           setWeatherError(false);
-          setLastRefresh(`Last refresh: ${nowHM()}`);
+          setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
         }
       } catch (e) {
         console.error("Weather fetch failed:", e);
@@ -107,13 +125,20 @@ export default function Dashboard() {
 
     async function updateTrains() {
       try {
+        const sentAt = Date.now();
         const r = await fetch("/api/trains");
         if (!r.ok) throw new Error("Server error " + r.status);
-        const data: Train[] = await r.json();
+        const data: TrainsResponse = await r.json();
         if (!cancelled) {
-          setTrains(data);
+          // Re-anchor to the server's clock. Charge half the round trip to the
+          // response leg so network latency doesn't skew the offset.
+          if (typeof data.nowMs === "number") {
+            const rtt = Date.now() - sentAt;
+            clockOffsetRef.current = data.nowMs + rtt / 2 - Date.now();
+          }
+          setTrains(data.trains ?? []);
           setTrainsError(false);
-          setLastRefresh(`Last refresh: ${nowHM()}`);
+          setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
         }
       } catch (e) {
         console.error("Train fetch failed:", e);
@@ -143,7 +168,7 @@ export default function Dashboard() {
       <Header time={time} date={date} />
       <main className="grid grid-cols-[1151fr_628fr] gap-8 min-h-0">
         <WeatherCard weather={weather} error={weatherError} />
-        <TrainsCard trains={trains} error={trainsError} />
+        <TrainsCard trains={trains} error={trainsError} nowMs={nowMs} />
       </main>
       {NEWS_ENABLED && <NewsCard />}
       <footer className="flex justify-between items-center pt-[14px] border-t border-line text-[0.78rem] text-muted">

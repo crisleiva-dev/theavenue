@@ -23,16 +23,20 @@ function to12hr(timeStr: string): string {
 export default function TrainsCard({
   trains,
   error,
+  nowMs,
 }: {
   trains: Train[] | null;
   error: boolean;
+  // Server-anchored clock supplied by Dashboard, so countdowns survive a
+  // drifted device clock. 0 until the first tick has run.
+  nowMs: number;
 }) {
   let body: React.ReactNode;
   if (error) {
     body = (
       <div className="text-muted text-base py-4">Departure data unavailable</div>
     );
-  } else if (trains == null) {
+  } else if (trains == null || nowMs === 0) {
     body = <div className="text-muted text-base py-4">Loading departures…</div>;
   } else if (trains.length === 0) {
     body = (
@@ -41,9 +45,8 @@ export default function TrainsCard({
       </div>
     );
   } else {
-    const nowMs = Date.now();
     body = trains.map((t, i) => {
-      // Minutes left = scheduled departure − the currently displayed time.
+      // Minutes left = scheduled departure − the server-anchored clock.
       const mins = Math.max(0, Math.round((t.scheduledMs - nowMs) / 60000));
       return (
         <div
