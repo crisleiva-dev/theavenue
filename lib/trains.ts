@@ -54,15 +54,17 @@ interface RealtimeEntry {
   cancelled: boolean;
 }
 
-export async function fetchTrains(): Promise<Train[]> {
+// Live delays/cancellations from Transport Victoria. Best-effort by design:
+// this is an *enhancement* over the static timetable, so every failure path
+// resolves to an empty overlay rather than throwing. Previously a slow or
+// erroring upstream aborted fetchTrains() entirely and the card rendered "No
+// upcoming departures found" even though the local timetable was fine.
+async function fetchRealtime(): Promise<Record<string, RealtimeEntry>> {
+  const out: Record<string, RealtimeEntry> = {};
   try {
-    const nowMs = Date.now();
-    if (_cache.data && nowMs - _cache.ts < CACHE_TTL_MS) return _cache.data;
-
     const apiKey = process.env.GTFS_API_KEY;
     if (!apiKey) throw new Error("GTFS_API_KEY is not set");
 
-    // 1. Pull the realtime feed and index it by trip_id.
     // Timeout: fail fast if GTFS takes > 4s (TV browser refresh safety margin).
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -80,7 +82,6 @@ export async function fetchTrains(): Promise<Train[]> {
     const buf = new Uint8Array(await resp.arrayBuffer());
     const feed = transit_realtime.FeedMessage.decode(buf);
 
-    const realtimeByTrip: Record<string, RealtimeEntry> = {};
     for (const entity of feed.entity) {
       const tu = entity.tripUpdate;
       if (!tu) continue;
@@ -91,13 +92,27 @@ export async function fetchTrains(): Promise<Train[]> {
       const depTs = toNum(stu.departure?.time) || toNum(stu.arrival?.time);
       if (!depTs) continue;
       const tripId = tu.trip?.tripId ?? "";
-      realtimeByTrip[tripId] = {
+      out[tripId] = {
         depUtc: DateTime.fromSeconds(depTs, { zone: ZONE }),
         delaySec:
           stu.departure?.delay != null ? toNum(stu.departure.delay) : 0,
         cancelled: tu.trip?.scheduleRelationship === CANCELED,
       };
     }
+  } catch (err) {
+    // Degrade to scheduled-only times; the card still shows the next 3 trains.
+    console.error("GTFS-RT overlay unavailable, using scheduled times:", err);
+  }
+  return out;
+}
+
+export async function fetchTrains(): Promise<Train[]> {
+  try {
+    const nowMs = Date.now();
+    if (_cache.data && nowMs - _cache.ts < CACHE_TTL_MS) return _cache.data;
+
+    // 1. Live overlay (never throws — may be empty).
+    const realtimeByTrip = await fetchRealtime();
 
     // 2. Walk the static schedule chronologically (today + tomorrow rollover).
     const { balaclava_departures, active_dates } = getGtfsCache();
