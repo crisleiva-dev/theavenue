@@ -16,10 +16,27 @@ import { unzipSync } from "fflate";
 import { parse } from "csv-parse/sync";
 import { DateTime } from "luxon";
 
-const GTFS_URL =
-  "https://opendata.transport.vic.gov.au/dataset/" +
-  "3f4e292e-7f8a-4ffe-831f-1953be0fe448/resource/" +
-  "fb152201-859f-4882-9206-b768060b50ad/download/gtfs.zip";
+// The download URL embeds a resource ID that Transport Victoria regenerates
+// when it republishes the file (2026-11 broke the hardcoded one with a 404),
+// so resolve the current ZIP through the CKAN API on every run.
+const GTFS_PACKAGE_URL =
+  "https://opendata.transport.vic.gov.au/api/3/action/package_show" +
+  "?id=3f4e292e-7f8a-4ffe-831f-1953be0fe448";
+
+async function resolveGtfsUrl(): Promise<string> {
+  const resp = await fetch(GTFS_PACKAGE_URL, {
+    headers: { "User-Agent": "curl/8.7.1" },
+  });
+  if (!resp.ok) throw new Error(`Dataset lookup failed: HTTP ${resp.status}`);
+  const body = (await resp.json()) as {
+    result?: { resources?: { format?: string; url?: string }[] };
+  };
+  const zip = body.result?.resources?.find(
+    (r) => r.format?.toUpperCase() === "ZIP" && r.url,
+  );
+  if (!zip?.url) throw new Error("No ZIP resource in GTFS Schedule dataset");
+  return zip.url;
+}
 
 const BALACLAVA_STOP = "14288";
 const LOOKAHEAD_DAYS = 14;
@@ -73,8 +90,9 @@ interface ServicePattern {
 }
 
 async function main() {
-  console.log("Downloading GTFS Schedule (~200 MB)…");
-  const resp = await fetch(GTFS_URL, {
+  const gtfsUrl = await resolveGtfsUrl();
+  console.log(`Downloading GTFS Schedule (~200 MB) from ${gtfsUrl}…`);
+  const resp = await fetch(gtfsUrl, {
     headers: { "User-Agent": "curl/8.7.1" },
   });
   if (!resp.ok) throw new Error(`Download failed: HTTP ${resp.status}`);
