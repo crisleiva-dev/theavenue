@@ -1,35 +1,26 @@
 @import "tailwindcss";
 
-/* Design tokens ported from the original index.html :root.
-   Tailwind v4 generates utilities from these (bg-bg, text-muted, rounded-card, animate-blink, ...). */
+/* Design tokens. Tailwind v4 generates utilities from these (bg-bg, text-soft,
+   rounded-card, ...).
+   One graphite ramp for every surface and three text roles (ink, soft, muted).
+   The single accent is the departure-board blue, reserved for the next train;
+   amber only ever means "leave now". */
 @theme {
-  --color-bg: #0c111d;
-  --color-surface: #141927;
-  --color-tile: rgba(255, 255, 255, 0.05);
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-blue: #5b9cf6;
-  --color-teal: #22d3ee;
-  --color-ink: #eef2ff;
-  --color-ice: #ecfeff;
-  --color-muted: #64748b;
-  --color-green: #34d399;
-  --color-amber: #fbbf24;
-  --color-red: #f87171;
-  --color-accent: #06b6d4;
+  --color-bg: #141415;
+  --color-surface: #19191b;
+  --color-tile: #232325;
+  --color-line: rgba(237, 237, 237, 0.08);
+
+  --color-ink: #ededed;
+  --color-soft: #a1a1a6;
+  --color-muted: #85858b;
+
+  --color-accent: #5b9cf6;
+  --color-on-accent: #0f0f10;
+  --color-amber: #f0b44c;
+  --color-green: #4cc38a;
 
   --radius-card: 20px;
-
-  --animate-blink: blink 2s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.25;
-  }
 }
 
 /* Defensive CSS for older WebViews (Fully Kiosk Browser, basic Android
@@ -53,8 +44,9 @@ body {
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
-    system-ui, sans-serif;
+  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
 }
 

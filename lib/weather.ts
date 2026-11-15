@@ -1,4 +1,4 @@
-// Open-Meteo weather helpers — ported verbatim from the original index.html.
+// Open-Meteo weather helpers, originally ported from index.html.
 // Weather is fetched client-side (no API key, CORS-friendly).
 
 export const WEATHER_URL =
@@ -9,38 +9,60 @@ export const WEATHER_URL =
   "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
   "&timezone=Australia/Melbourne&forecast_days=4";
 
-// WMO weather code -> [emoji, label]
-export const WMO: Record<number, [string, string]> = {
-  0: ["☀️", "Clear Sky"],
-  1: ["🌤️", "Mainly Clear"],
-  2: ["⛅", "Partly Cloudy"],
-  3: ["☁️", "Overcast"],
-  45: ["🌫️", "Foggy"],
-  48: ["🌫️", "Icy Fog"],
-  51: ["🌦️", "Light Drizzle"],
-  53: ["🌦️", "Drizzle"],
-  55: ["🌧️", "Heavy Drizzle"],
-  61: ["🌧️", "Light Rain"],
-  63: ["🌧️", "Rain"],
-  65: ["🌧️", "Heavy Rain"],
-  71: ["🌨️", "Light Snow"],
-  73: ["❄️", "Snow"],
-  75: ["❄️", "Heavy Snow"],
-  77: ["🌨️", "Snow Grains"],
-  80: ["🌦️", "Light Showers"],
-  81: ["🌧️", "Showers"],
-  82: ["⛈️", "Heavy Showers"],
-  85: ["🌨️", "Snow Showers"],
-  86: ["🌨️", "Heavy Snow Showers"],
-  95: ["⛈️", "Thunderstorm"],
-  96: ["⛈️", "Thunderstorm + Hail"],
-  99: ["⛈️", "Severe Thunderstorm"],
+// Line-icon names drawn by components/WeatherIcon.tsx.
+export type WeatherIconName =
+  | "sun"
+  | "cloud-sun"
+  | "cloud"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "snowflake"
+  | "storm"
+  | "unknown";
+
+// WMO weather code -> [icon, label]
+export const WMO: Record<number, [WeatherIconName, string]> = {
+  0: ["sun", "Clear sky"],
+  1: ["cloud-sun", "Mainly clear"],
+  2: ["cloud-sun", "Partly cloudy"],
+  3: ["cloud", "Overcast"],
+  45: ["fog", "Foggy"],
+  48: ["fog", "Icy fog"],
+  51: ["drizzle", "Light drizzle"],
+  53: ["drizzle", "Drizzle"],
+  55: ["drizzle", "Heavy drizzle"],
+  61: ["rain", "Light rain"],
+  63: ["rain", "Rain"],
+  65: ["rain", "Heavy rain"],
+  71: ["snow", "Light snow"],
+  73: ["snowflake", "Snow"],
+  75: ["snowflake", "Heavy snow"],
+  77: ["snow", "Snow grains"],
+  80: ["drizzle", "Light showers"],
+  81: ["rain", "Showers"],
+  82: ["storm", "Heavy showers"],
+  85: ["snow", "Snow showers"],
+  86: ["snow", "Heavy snow showers"],
+  95: ["storm", "Thunderstorm"],
+  96: ["storm", "Thunderstorm and hail"],
+  99: ["storm", "Severe thunderstorm"],
 };
 
 export function compassDir(deg: number): string {
   return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][
     Math.round(deg / 45) % 8
   ];
+}
+
+// WHO UV index category.
+export function uvLevel(uv: number): string {
+  if (uv < 3) return "Low";
+  if (uv < 6) return "Moderate";
+  if (uv < 8) return "High";
+  if (uv < 11) return "Very high";
+  return "Extreme";
 }
 
 export function forecastDayLabel(dateStr: string, index: number): string {

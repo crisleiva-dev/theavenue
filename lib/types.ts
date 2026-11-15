@@ -1,5 +1,7 @@
 // Shared, framework-agnostic types (safe to import from both client and server).
 
+import type { WeatherIconName } from "./weather";
+
 export interface Train {
   time: string; // effective departure HH:mm (live if available, else scheduled)
   scheduledTime: string; // original timetabled departure HH:mm (what we display)
@@ -24,7 +26,7 @@ export interface TrainsResponse {
 
 export interface ForecastTile {
   day: string;
-  icon: string;
+  icon: WeatherIconName;
   desc: string;
   max: string;
   min: string;
@@ -33,14 +35,16 @@ export interface ForecastTile {
 
 export interface WeatherVM {
   temp: string;
-  icon: string;
+  icon: WeatherIconName;
   desc: string;
   max: string;
   min: string;
   feelsLike: string;
   humidity: string;
-  wind: string;
+  windSpeed: string; // "14"
+  windDir: string; // "S"
   uv: string;
+  uvLevel: string; // WHO category, e.g. "High"
   updated: string;
   forecast: ForecastTile[];
 }

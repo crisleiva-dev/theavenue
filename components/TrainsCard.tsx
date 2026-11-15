@@ -1,16 +1,17 @@
 import type { Train } from "@/lib/types";
 
-function badgeClasses(mins: number): string {
-  if (mins <= 2) return "bg-blue text-white border border-transparent";
+// Countdown colour keeps its existing meaning for residents:
+// due within 2 min = the accent, within 10 min = amber (leave now), else quiet.
+function countdownClasses(mins: number): string {
+  if (mins <= 2) return "bg-accent text-on-accent";
   if (mins <= 10)
-    return "bg-[rgba(251,191,36,0.15)] text-amber border border-[rgba(251,191,36,0.3)]";
-  return "bg-tile text-ink border-[1.9px] border-line";
+    return "bg-tile text-amber shadow-[inset_0_0_0_1px_rgba(240,180,76,0.35)]";
+  return "bg-tile text-ink";
 }
 
-function badgeLabel(mins: number): string {
-  if (mins === 0) return "NOW";
-  if (mins === 1) return "1 min";
-  return `${mins} mins`;
+function countdownLabel(mins: number): string {
+  if (mins === 0) return "Now";
+  return `${mins} min`;
 }
 
 function to12hr(timeStr: string): string {
@@ -34,15 +35,19 @@ export default function TrainsCard({
   let body: React.ReactNode;
   if (error) {
     body = (
-      <div className="text-muted text-base py-4">Departure data unavailable</div>
+      <div className="text-soft text-[1.25rem] py-6">
+        Departure data unavailable
+      </div>
     );
     // Guard on Array rather than null: if the API shape ever drifts again, show
     // the loading state instead of crashing the card on .map().
   } else if (!Array.isArray(trains) || nowMs === 0) {
-    body = <div className="text-muted text-base py-4">Loading departures…</div>;
+    body = (
+      <div className="text-soft text-[1.25rem] py-6">Loading departures…</div>
+    );
   } else if (trains.length === 0) {
     body = (
-      <div className="text-muted text-base py-4">
+      <div className="text-soft text-[1.25rem] py-6">
         No upcoming departures found
       </div>
     );
@@ -53,31 +58,32 @@ export default function TrainsCard({
       return (
         <div
           key={t.tripId || i}
-          className="bg-tile rounded-[16px] px-7 py-6 flex items-center justify-between gap-4 border-l-[12px] border-l-accent"
+          className="flex items-center justify-between gap-6 py-6 border-b border-line last:border-b-0"
         >
-          <div className="min-w-0 flex flex-col gap-[5px]">
-            <div className="text-[1.4rem] font-bold leading-[1.15] text-ink whitespace-nowrap">
-              To {t.destination ?? "Flinders Street Station"}
-            </div>
-            <div className="text-[1.4rem] font-bold leading-[1.15] text-ink">
-              Scheduled {to12hr(t.scheduledTime)}
-            </div>
-            <div className="text-[1rem] text-ink mt-[2px]">
-              Platform {t.platform}
-              {t.via ? (
-                <>
-                  {" · "}
-                  <span className="font-bold">via {t.via}</span>
-                </>
-              ) : null}
+          <div className="min-w-0 flex items-stretch gap-4">
+            {/* Signature: one rule marks the next departure, like a platform board */}
+            <span
+              className={`w-1 rounded-full shrink-0 ${i === 0 ? "bg-accent" : "bg-transparent"}`}
+            />
+            <div className="min-w-0 flex flex-col gap-3">
+              <div className="text-[2.5rem] font-medium leading-none tabular-nums text-ink">
+                {to12hr(t.scheduledTime)}
+              </div>
+              <div className="text-[1.375rem] leading-none text-soft truncate">
+                {t.destination ?? "Flinders Street Station"}
+              </div>
+              <div className="text-[1.125rem] leading-none text-muted truncate">
+                Platform {t.platform}
+                {t.via ? ` · via ${t.via}` : ""}
+              </div>
             </div>
           </div>
           <span
-            className={`shrink-0 px-[24px] py-[12px] rounded-[38px] text-[1.35rem] font-bold whitespace-nowrap ${badgeClasses(
+            className={`shrink-0 min-w-32 text-center px-5 py-3 rounded-xl text-[1.75rem] font-medium leading-none tabular-nums ${countdownClasses(
               mins,
             )}`}
           >
-            {badgeLabel(mins)}
+            {countdownLabel(mins)}
           </span>
         </div>
       );
@@ -85,26 +91,24 @@ export default function TrainsCard({
   }
 
   return (
-    <div className="bg-surface border border-line rounded-card p-[32px_34px] flex flex-col gap-6 min-h-0 overflow-hidden">
-      <div className="shrink-0">
-        <div className="flex items-center gap-[10px] mb-2">
-          <span className="text-[0.9rem] uppercase tracking-[0.12em] text-muted">
-            Next Trains
-          </span>
-          <span className="inline-flex items-center gap-1 bg-[#dcfce7] text-[#116932] text-[0.72rem] font-semibold px-[7px] py-[3px] rounded-[4px] leading-[14px]">
-            <span className="w-[6px] h-[6px] bg-[#116932] rounded-full shrink-0" />
+    <div className="bg-surface border border-line rounded-card p-8 flex flex-col gap-6 min-h-0 overflow-hidden">
+      <div className="shrink-0 flex flex-col gap-4">
+        <div className="flex items-center gap-3 text-[1.125rem] leading-none">
+          <span className="text-soft">Next trains</span>
+          <span className="flex items-center gap-2 text-muted">
+            <span className="w-2 h-2 rounded-full bg-green shrink-0" />
             Live
           </span>
         </div>
-        <div className="text-[2.2rem] font-bold leading-[1.1] whitespace-nowrap text-ink">
+        <div className="text-[2.25rem] font-medium leading-none whitespace-nowrap text-ink">
           Balaclava Station
         </div>
-        <div className="text-[1.35rem] text-teal mt-2 font-bold">
-          Sandringham | Towards city
+        <div className="text-[1.375rem] leading-none text-soft">
+          Sandringham line · Towards city
         </div>
       </div>
 
-      <div className="flex flex-col gap-8 flex-1 min-h-0">{body}</div>
+      <div className="flex flex-col flex-1 min-h-0">{body}</div>
     </div>
   );
 }
