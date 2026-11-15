@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
+
+// Self-hosted by next/font, so the TV never calls Google Fonts directly.
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export const metadata: Metadata = {
   title: "The Avenue Residence Portal",
@@ -18,7 +22,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={geist.variable}>
       <body className="overflow-hidden">{children}</body>
     </html>
   );

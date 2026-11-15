@@ -10,6 +10,7 @@ import {
   WMO,
   compassDir,
   forecastDayLabel,
+  uvLevel,
   type OpenMeteoResponse,
 } from "@/lib/weather";
 import type { Train, TrainsResponse, WeatherVM } from "@/lib/types";
@@ -26,7 +27,7 @@ const TZ = "Australia/Melbourne";
 function nowHM(ms: number): string {
   return new Date(ms).toLocaleTimeString("en-AU", {
     timeZone: TZ,
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
   });
 }
@@ -38,7 +39,7 @@ export default function Dashboard() {
   const [weatherError, setWeatherError] = useState(false);
   const [trains, setTrains] = useState<Train[] | null>(null);
   const [trainsError, setTrainsError] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState("Initialising…");
+  const [lastRefresh, setLastRefresh] = useState("Connecting…");
   const [nowMs, setNowMs] = useState(0);
 
   // Difference between the server's clock and this device's, refreshed on every
@@ -118,7 +119,7 @@ export default function Dashboard() {
         const d: OpenMeteoResponse = await r.json();
         const c = d.current;
         const day = d.daily;
-        const [icon, desc] = WMO[c.weather_code] ?? ["🌡️", "Unknown"];
+        const [icon, desc] = WMO[c.weather_code] ?? ["unknown", "Unknown"];
         const vm: WeatherVM = {
           temp: `${Math.round(c.temperature_2m)}°`,
           icon,
@@ -127,11 +128,13 @@ export default function Dashboard() {
           min: `${Math.round(day.temperature_2m_min[0])}°`,
           feelsLike: `${Math.round(c.apparent_temperature)}°`,
           humidity: `${c.relative_humidity_2m}%`,
-          wind: `${Math.round(c.wind_speed_10m)} km/h ${compassDir(c.wind_direction_10m ?? 0)}`,
+          windSpeed: `${Math.round(c.wind_speed_10m)}`,
+          windDir: compassDir(c.wind_direction_10m ?? 0),
           uv: `${Math.round(c.uv_index ?? 0)}`,
+          uvLevel: uvLevel(Math.round(c.uv_index ?? 0)),
           updated: nowHM(serverNow()),
           forecast: [1, 2, 3].map((i) => {
-            const [fi, fd] = WMO[day.weather_code[i]] ?? ["🌡️", ""];
+            const [fi, fd] = WMO[day.weather_code[i]] ?? ["unknown", ""];
             return {
               day: forecastDayLabel(day.time[i], i),
               icon: fi,
@@ -145,7 +148,7 @@ export default function Dashboard() {
         if (!cancelled) {
           setWeather(vm);
           setWeatherError(false);
-          setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
+          setLastRefresh(`Updated ${nowHM(serverNow())}`);
         }
       } catch (e) {
         console.error("Weather fetch failed:", e);
@@ -179,7 +182,7 @@ export default function Dashboard() {
 
           setTrains(list);
           setTrainsError(false);
-          setLastRefresh(`Last refresh: ${nowHM(serverNow())}`);
+          setLastRefresh(`Updated ${nowHM(serverNow())}`);
 
           maybeReloadForNewBuild(r.headers.get("x-build-id"));
         }
@@ -204,8 +207,8 @@ export default function Dashboard() {
     <div
       className={
         NEWS_ENABLED
-          ? "h-screen grid grid-rows-[auto_minmax(0,1.8fr)_minmax(0,1fr)_auto] px-9 pt-5 pb-[18px] gap-4 overflow-hidden"
-          : "h-screen grid grid-rows-[auto_1fr_auto] px-9 pt-5 pb-[18px] gap-4 overflow-hidden"
+          ? "h-screen grid grid-rows-[auto_minmax(0,1.8fr)_minmax(0,1fr)_auto] px-10 pt-6 pb-5 gap-6 overflow-hidden"
+          : "h-screen grid grid-rows-[auto_1fr_auto] px-10 pt-6 pb-5 gap-6 overflow-hidden"
       }
     >
       <Header time={time} date={date} />
@@ -214,13 +217,9 @@ export default function Dashboard() {
         <TrainsCard trains={trains} error={trainsError} nowMs={nowMs} />
       </main>
       {NEWS_ENABLED && <NewsCard />}
-      <footer className="flex justify-between items-center pt-[14px] border-t border-line text-[0.78rem] text-muted">
-        <div className="flex items-center gap-[10px]">
-          <span className="w-2 h-2 bg-green rounded-full shrink-0 animate-blink" />
-          Weather: Open-Meteo &nbsp;·&nbsp; Trains: Transport Victoria GTFS
-          Realtime
-        </div>
-        <div>{lastRefresh}</div>
+      <footer className="flex justify-between items-center pt-4 border-t border-line text-base text-muted">
+        <div>Weather from Open-Meteo · Trains from Transport Victoria</div>
+        <div className="tabular-nums">{lastRefresh}</div>
       </footer>
     </div>
   );
